@@ -577,6 +577,8 @@ export default function StudyLocationsPage() {
                         mapRef={mapRef}
                       />
                     </div>
+                    
+                    {/* Show form once a shape is drawn */}
                     {(drawingCircle || drawingBox) && (
                       <div className="grid gap-4">
                         <div className="grid gap-2">

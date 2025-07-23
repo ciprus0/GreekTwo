@@ -992,7 +992,7 @@ export default function MessagesPage() {
                               }
                               alt={
                                 conversation.type === "group"
-                                  ? conversation.name || "Group"
+                                  ? conversation.groupChat?.name || conversation.name || "Group"
                                   : otherMember?.name || "Unknown"
                               }
                               width={40}
@@ -1001,7 +1001,7 @@ export default function MessagesPage() {
                             />
                             <AvatarFallback>
                               {conversation.type === "group"
-                                ? (conversation.name || "G").charAt(0).toUpperCase()
+                                ? (conversation.groupChat?.name || conversation.name || "G").charAt(0).toUpperCase()
                                 : otherMember?.name
                                     ?.split(" ")
                                     .map((n) => n[0])
@@ -1067,7 +1067,7 @@ export default function MessagesPage() {
                       }
                       alt={
                         activeChatType === "group"
-                          ? activeConversation?.name || "Group"
+                          ? activeConversation?.groupChat?.name || activeConversation?.name || "Group"
                           : activeConversation?.name || "Unknown"
                       }
                       width={32}
@@ -1076,7 +1076,7 @@ export default function MessagesPage() {
                     />
                     <AvatarFallback>
                       {activeChatType === "group"
-                        ? (activeConversation?.name || "G").charAt(0).toUpperCase()
+                        ? (activeConversation?.groupChat?.name || activeConversation?.name || "G").charAt(0).toUpperCase()
                         : activeConversation?.name
                             ?.split(" ")
                             .map((n) => n[0])
@@ -1122,12 +1122,20 @@ export default function MessagesPage() {
                   currentMessages.map((msg, index) => {
                     const senderMember = members.find((m) => m.id === msg.senderId)
                     const isCurrentUser = msg.senderId === user?.id
-                    const showSenderInfo = index === 0 || currentMessages[index - 1]?.senderId !== msg.senderId
                     
                     // Check if we need to show a date banner
                     const currentDate = new Date(msg.timestamp).toDateString()
                     const previousDate = index > 0 ? new Date(currentMessages[index - 1].timestamp).toDateString() : null
                     const showDateBanner = index === 0 || currentDate !== previousDate
+                    
+                    // Check if we need to show sender info (Discord-style grouping)
+                    const previousMessage = index > 0 ? currentMessages[index - 1] : null
+                    const timeDiff = previousMessage ? new Date(msg.timestamp).getTime() - new Date(previousMessage.timestamp).getTime() : 0
+                    const showSenderInfo = 
+                      index === 0 || 
+                      msg.senderId !== previousMessage?.senderId || 
+                      currentDate !== previousDate ||
+                      timeDiff > 5 * 60 * 1000 // 5 minutes
 
                     return (
                       <div key={msg.id}>
@@ -1135,7 +1143,7 @@ export default function MessagesPage() {
                         {showDateBanner && (
                           <div className="flex justify-center my-4">
                             <div className={`px-3 py-1 rounded-full text-xs font-medium ${getSecondaryTextColor()} bg-slate-100 dark:bg-slate-800`}>
-                              {formatDate(msg.timestamp)}
+                              {formatDateSeparator(msg.timestamp)}
                             </div>
                           </div>
                         )}

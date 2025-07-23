@@ -1168,15 +1168,15 @@ export default function StudyPage() {
             <CardContent className="pt-6">
               {currentStudyZone ? (
                 <div className="p-3 bg-green-500/20 border border-green-500/30 rounded-md flex items-center">
-                  <MapPin className="h-4 w-4 text-green-400 mr-2" />
-                  <span className="text-sm text-green-300">
+                  <MapPin className="h-4 w-4 text-green-600 dark:text-green-400 mr-2" />
+                  <span className="text-sm text-green-700 dark:text-green-300">
                     You are currently in the <strong>{currentStudyZone?.name}</strong> study zone.
                   </span>
                 </div>
               ) : (
                 <div className="p-3 bg-orange-500/20 border border-orange-500/30 rounded-md flex items-center">
-                  <AlertCircle className="h-4 w-4 text-orange-400 mr-2" />
-                  <span className="text-sm text-orange-300">You are not currently in any designated study zone.</span>
+                  <AlertCircle className="h-4 w-4 text-orange-600 dark:text-orange-400 mr-2" />
+                  <span className="text-sm text-orange-700 dark:text-orange-300">You are not currently in any designated study zone.</span>
                 </div>
               )}
             </CardContent>
@@ -1511,10 +1511,10 @@ export default function StudyPage() {
               </div>
               <div className="gri gap-2">
                 <Label className={getTextColor()}>Target Members</Label>
-                <div className="text-sm text-slate-400 mb-2">
+                <div className={`text-sm ${getSecondaryTextColor()} mb-2`}>
                   Leave empty to apply to all members, or select specific members.
                 </div>
-                <div className="max-h-32 overflow-y-auto space-y-2 border border-white/20 rounded-md p-2">
+                <div className="max-h-32 overflow-y-auto space-y-2 border rounded-md p-2">
                   {allMembers.map((member) => (
                     <div key={member.id} className="flex items-center space-x-2">
                       <Checkbox
@@ -1528,7 +1528,7 @@ export default function StudyPage() {
                           }
                         }}
                       />
-                      <Label htmlFor={`member-${member.id}`} className="text-sm text-slate-300">
+                      <Label htmlFor={`member-${member.id}`} className={`text-sm ${getTextColor()}`}>
                         {member.name}
                       </Label>
                     </div>
