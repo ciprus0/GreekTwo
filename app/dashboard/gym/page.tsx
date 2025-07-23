@@ -778,19 +778,22 @@ export default function GymPage() {
 
   // Map interaction handlers
   const handleMapClick = (e) => {
+    // Handle different event structures - the map component passes latlng directly
+    const latlng = e.latlng || e
+    
     if (isMovingShape) {
       if (drawingCircle) {
         setDrawingCircle({
           ...drawingCircle,
-          center: { lat: e.latlng.lat, lng: e.latlng.lng },
+          center: { lat: latlng.lat, lng: latlng.lng },
         })
       } else if (drawingBox) {
         const latDiff = drawingBox.se.lat - drawingBox.nw.lat
         const lngDiff = drawingBox.se.lng - drawingBox.nw.lng
         setDrawingBox({
           ...drawingBox,
-          nw: { lat: e.latlng.lat, lng: e.latlng.lng },
-          se: { lat: e.latlng.lat + latDiff, lng: e.latlng.lng + lngDiff },
+          nw: { lat: latlng.lat, lng: latlng.lng },
+          se: { lat: latlng.lat + latDiff, lng: latlng.lng + lngDiff },
         })
       }
       setIsMovingShape(false)
@@ -806,7 +809,7 @@ export default function GymPage() {
     } else if (clickMode && drawingMode === "circle") {
       if (!drawingCircle) {
         setDrawingCircle({
-          center: { lat: e.latlng.lat, lng: e.latlng.lng },
+          center: { lat: latlng.lat, lng: latlng.lng },
           radius: 100,
           isDrawing: true,
         })
@@ -820,14 +823,14 @@ export default function GymPage() {
     } else if (clickMode && drawingMode === "box") {
       if (!drawingBox) {
         setDrawingBox({
-          nw: { lat: e.latlng.lat, lng: e.latlng.lng },
-          se: { lat: e.latlng.lat, lng: e.latlng.lng },
+          nw: { lat: latlng.lat, lng: latlng.lng },
+          se: { lat: latlng.lat, lng: latlng.lng },
           isDrawing: true,
         })
       } else if (drawingBox.isDrawing) {
         setDrawingBox({
           ...drawingBox,
-          se: { lat: e.latlng.lat, lng: e.latlng.lng },
+          se: { lat: latlng.lat, lng: latlng.lng },
           isDrawing: false,
         })
         setClickMode(false)
@@ -836,19 +839,22 @@ export default function GymPage() {
   }
 
   const handleMapMove = (e) => {
+    // Handle different event structures - the map component passes latlng directly
+    const latlng = e.latlng || e
+    
     if (drawingBox && drawingBox.isDrawing) {
       setDrawingBox({
         ...drawingBox,
-        se: { lat: e.latlng.lat, lng: e.latlng.lng },
+        se: { lat: latlng.lat, lng: latlng.lng },
       })
     } else if (drawingCircle && drawingCircle.isDrawing) {
-      const distance = calculateDistance(drawingCircle.center, { lat: e.latlng.lat, lng: e.latlng.lng })
+      const distance = calculateDistance(drawingCircle.center, { lat: latlng.lat, lng: latlng.lng })
       setDrawingCircle({
         ...drawingCircle,
         radius: Math.max(50, Math.min(500, distance)),
       })
     } else if (isResizingShape && drawingCircle) {
-      const distance = calculateDistance(drawingCircle.center, { lat: e.latlng.lat, lng: e.latlng.lng })
+      const distance = calculateDistance(drawingCircle.center, { lat: latlng.lat, lng: latlng.lng })
       setDrawingCircle({
         ...drawingCircle,
         radius: Math.max(50, Math.min(500, distance)),
@@ -856,7 +862,7 @@ export default function GymPage() {
     } else if (isResizingShape && drawingBox) {
       setDrawingBox({
         ...drawingBox,
-        se: { lat: e.latlng.lat, lng: e.latlng.lng },
+        se: { lat: latlng.lat, lng: latlng.lng },
       })
     }
   }
