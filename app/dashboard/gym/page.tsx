@@ -1679,101 +1679,73 @@ export default function GymPage() {
                       <DialogHeader>
                         <DialogTitle className={getTextColor()}>Create Gym Hour Requirement</DialogTitle>
                         <DialogDescription className={getSecondaryTextColor()}>
-                          Set hour requirements for members to complete.
+                          Set gym hour requirements for specific members or all members.
                         </DialogDescription>
                       </DialogHeader>
-                      <div className="space-y-6">
-                        <div className="grid gap-4">
-                          <div className="grid gap-2">
-                            <Label htmlFor="requirement-name" className={getTextColor()}>
-                              Requirement Name
-                            </Label>
-                            <Input
-                              id="requirement-name"
-                              name="name"
-                              value={newRequirement.name}
-                              onChange={handleRequirementInputChange}
-                              placeholder="e.g., Weekly Gym Hours"
-                              className={getCardClasses()}
-                            />
-                          </div>
-                          <div className="grid gap-2">
-                            <Label htmlFor="requirement-description" className={getTextColor()}>
-                              Description (Optional)
-                            </Label>
-                            <Input
-                              id="requirement-description"
-                              name="description"
-                              value={newRequirement.description}
-                              onChange={handleRequirementInputChange}
-                              placeholder="e.g., Weekly gym hours requirement for all members"
-                              className={getCardClasses()}
-                            />
-                          </div>
-                          <div className="grid gap-2">
-                            <Label htmlFor="hours-required" className="text-white">
-                              Hours Required
-                            </Label>
-                            <Select
-                              value={newRequirement.hoursRequired.toString()}
-                              onValueChange={handleHoursRequiredChange}
-                            >
-                              <SelectTrigger className="bg-slate-700 border-slate-600 text-white">
-                                <SelectValue placeholder="Select hours" />
-                              </SelectTrigger>
-                              <SelectContent className="bg-slate-800 border-slate-700 text-white">
-                                <SelectGroup>
-                                  <SelectLabel>Hours</SelectLabel>
-                                  {[1, 2, 3, 4, 5, 10, 15, 20, 25, 30, 40, 50].map((hours) => (
-                                    <SelectItem key={hours} value={hours.toString()}>
-                                      {hours} hours
-                                    </SelectItem>
-                                  ))}
-                                </SelectGroup>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div className="grid gap-2">
-                            <div className="flex items-center justify-between">
-                              <Label className="text-white">Target Members</Label>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={handleSelectAllMembers}
-                                className="bg-transparent border-slate-600 text-white hover:bg-slate-700 text-xs h-7"
-                              >
-                                {selectedMembers.length === allMembers.length ? "Deselect All" : "Select All"}
-                              </Button>
-                            </div>
-                            <div className="h-[200px] overflow-y-auto border border-slate-700 rounded-md p-2">
-                              {allMembers.length > 0 ? (
-                                <div className="space-y-2">
-                                  {allMembers.map((member) => (
-                                    <div key={member.id} className="flex items-center space-x-2">
-                                      <Checkbox
-                                        id={`member-${member.id}`}
-                                        checked={selectedMembers.includes(member.id)}
-                                        onCheckedChange={() => handleMemberSelection(member.id)}
-                                        className="border-slate-500 data-[state=checked]:bg-rose-700 data-[state=checked]:border-rose-700"
-                                      />
-                                      <Label
-                                        htmlFor={`member-${member.id}`}
-                                        className="text-sm text-white cursor-pointer"
-                                      >
-                                        {member.name}
-                                      </Label>
-                                    </div>
-                                  ))}
-                                </div>
-                              ) : (
-                                <p className="text-sm text-slate-400 text-center py-4">No members found</p>
-                              )}
-                            </div>
-                            <p className="text-xs text-slate-400">
-                              {selectedMembers.length === 0
-                                ? "No members selected (will apply to all members)"
-                                : `${selectedMembers.length} member${selectedMembers.length === 1 ? "" : "s"} selected`}
-                            </p>
+                      <div className="space-y-4">
+                        <div className="grid gap-2">
+                          <Label htmlFor="requirement-name" className={getTextColor()}>
+                            Requirement Name
+                          </Label>
+                          <Input
+                            id="requirement-name"
+                            name="name"
+                            value={newRequirement.name}
+                            onChange={handleRequirementInputChange}
+                            placeholder="e.g., Weekly Gym Hours"
+                            className={getCardClasses()}
+                          />
+                        </div>
+                        <div className="grid gap-2">
+                          <Label htmlFor="requirement-description" className={getTextColor()}>
+                            Description (Optional)
+                          </Label>
+                          <Input
+                            id="requirement-description"
+                            name="description"
+                            value={newRequirement.description}
+                            onChange={handleRequirementInputChange}
+                            placeholder="e.g., Minimum gym hours per week"
+                            className={getCardClasses()}
+                          />
+                        </div>
+                        <div className="grid gap-2">
+                          <Label htmlFor="requirement-hours" className={getTextColor()}>
+                            Hours Required
+                          </Label>
+                          <Input
+                            id="requirement-hours"
+                            name="hoursRequired"
+                            type="number"
+                            min="0"
+                            step="0.5"
+                            value={newRequirement.hoursRequired}
+                            onChange={handleRequirementInputChange}
+                            className={getCardClasses()}
+                          />
+                        </div>
+                        <div className="grid gap-2">
+                          <Label className={getTextColor()}>Target Members</Label>
+                          <p className={`text-sm ${getSecondaryTextColor()}`}>
+                            Leave empty to apply to all members, or select specific members.
+                          </p>
+                          <div className="max-h-40 overflow-y-auto space-y-2 border rounded-md p-2">
+                            {allMembers.map((member) => (
+                              <div key={member.id} className="flex items-center space-x-2">
+                                <Checkbox
+                                  id={`member-${member.id}`}
+                                  checked={selectedMembers.includes(member.id)}
+                                  onCheckedChange={() => handleMemberSelection(member.id)}
+                                  className="border-slate-500 data-[state=checked]:bg-rose-700 data-[state=checked]:border-rose-700"
+                                />
+                                <Label
+                                  htmlFor={`member-${member.id}`}
+                                  className={`text-sm cursor-pointer ${getTextColor()}`}
+                                >
+                                  {member.name}
+                                </Label>
+                              </div>
+                            ))}
                           </div>
                         </div>
                         <div className="flex gap-2 justify-end">

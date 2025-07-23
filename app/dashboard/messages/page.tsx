@@ -21,6 +21,7 @@ import NextImage from "next/image"
 import { ThemeWrapper, useTextColors } from "@/components/theme-wrapper"
 import { useTheme } from "@/lib/theme-context"
 import { compressImage } from "@/lib/file-storage"
+import { useDebounce, useCleanup } from "@/lib/performance-utils"
 
 // Emoji picker data
 const EMOJI_CATEGORIES = [
