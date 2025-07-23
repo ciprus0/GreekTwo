@@ -653,7 +653,7 @@ export default function AnnouncementsPage() {
 
         {/* Create Announcement Dialog */}
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className={`max-w-2xl ${getCardClasses()}`}>
             <DialogHeader>
               <DialogTitle className={getTextColor()}>Create New Announcement</DialogTitle>
               <DialogDescription className={getSecondaryTextColor()}>
@@ -737,7 +737,7 @@ export default function AnnouncementsPage() {
             setChannelFormData({ name: "", description: "", color: "#4F8EF7" })
           }
         }}>
-          <DialogContent className="max-w-md">
+          <DialogContent className={`max-w-md ${getCardClasses()}`}>
             <DialogHeader>
               <DialogTitle className={getTextColor()}>
                 {editingChannel ? "Edit Channel" : "Create New Channel"}
@@ -825,7 +825,7 @@ export default function AnnouncementsPage() {
             setFormData({ title: "", content: "", channel: "general" })
           }
         }}>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className={`max-w-2xl ${getCardClasses()}`}>
             <DialogHeader>
               <DialogTitle className={getTextColor()}>Edit Announcement</DialogTitle>
               <DialogDescription className={getSecondaryTextColor()}>
@@ -907,7 +907,7 @@ export default function AnnouncementsPage() {
 
         {/* Manage Channels Dialog */}
         <Dialog open={isManageChannelsDialogOpen} onOpenChange={setIsManageChannelsDialogOpen}>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className={`max-w-2xl ${getCardClasses()}`}>
             <DialogHeader>
               <DialogTitle className={getTextColor()}>Manage Channels</DialogTitle>
               <DialogDescription className={getSecondaryTextColor()}>

@@ -116,6 +116,19 @@ export default function StudyLocationsPage() {
     }
   }
 
+  // Get theme-aware dialog classes (solid colors for dark theme to avoid lag)
+  const getDialogClasses = () => {
+    switch (theme) {
+      case "original":
+        return "bg-white border border-gray-200 shadow-lg"
+      case "light":
+        return "bg-white/95 backdrop-blur-sm border border-blue-200/60 shadow-lg"
+      case "dark":
+      default:
+        return "bg-slate-800 border border-slate-700 shadow-lg"
+    }
+  }
+
   // Effect to load user from localStorage
   useEffect(() => {
     console.log("StudyLocationsPage: Initializing component.")
@@ -547,10 +560,10 @@ export default function StudyLocationsPage() {
                     Create New Study Location
                   </Button>
                 </DialogTrigger>
-                <DialogContent className={`sm:max-w-[900px] max-h-[90vh] overflow-y-auto shadow-2xl ${getCardClasses()}`}>
+                <DialogContent className={`sm:max-w-[900px] max-h-[90vh] overflow-y-auto shadow-2xl ${getDialogClasses()}`}>
                   <DialogHeader>
-                    <DialogTitle>Create New Study Location</DialogTitle>
-                    <DialogDescription>
+                    <DialogTitle className={getTextColor()}>Create New Study Location</DialogTitle>
+                    <DialogDescription className={getSecondaryTextColor()}>
                       Draw a shape on the map and fill in the details to create a new study location.
                     </DialogDescription>
                   </DialogHeader>
@@ -749,10 +762,10 @@ export default function StudyLocationsPage() {
                                   <Edit className="h-4 w-4" />
                                 </Button>
                               </DialogTrigger>
-                              <DialogContent className={`sm:max-w-[500px] shadow-2xl ${getCardClasses()}`}>
+                              <DialogContent className={`sm:max-w-[500px] shadow-2xl ${getDialogClasses()}`}>
                                 <DialogHeader>
-                                  <DialogTitle>Edit Study Location</DialogTitle>
-                                  <DialogDescription>
+                                  <DialogTitle className={getTextColor()}>Edit Study Location</DialogTitle>
+                                  <DialogDescription className={getSecondaryTextColor()}>
                                     Update the details of this study location.
                                   </DialogDescription>
                                 </DialogHeader>

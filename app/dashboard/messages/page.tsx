@@ -97,12 +97,25 @@ export default function MessagesPage() {
   const getButtonClasses = (variant: "default" | "outline" | "ghost" | "link") => {
     switch (theme) {
       case "original":
-        return "original-button"
+        return variant === "default" ? "original-button" : "original-button-outline"
       case "light":
-        return "light-button"
+        return variant === "default" ? "light-glass-button" : "light-glass-button-outline"
       case "dark":
       default:
-        return "glass-button"
+        return variant === "default" ? "glass-button" : "glass-button-outline"
+    }
+  }
+
+  // Get theme-aware input classes
+  const getInputClasses = () => {
+    switch (theme) {
+      case "original":
+        return "original-input"
+      case "light":
+        return "light-glass-input"
+      case "dark":
+      default:
+        return "glass-input"
     }
   }
 
@@ -1447,10 +1460,10 @@ export default function MessagesPage() {
 
         {/* New Chat Dialog */}
         <Dialog open={showNewChatDialog} onOpenChange={setShowNewChatDialog}>
-          <DialogContent className="max-w-md shadow-2xl">
+          <DialogContent className={`max-w-md shadow-2xl ${getCardClasses()}`}>
             <DialogHeader>
-              <DialogTitle>Start New Chat</DialogTitle>
-              <DialogDescription>
+              <DialogTitle className={getTextColor()}>Start New Chat</DialogTitle>
+              <DialogDescription className={getSecondaryTextColor()}>
                 Select members to start a conversation. Select multiple for a group chat.
               </DialogDescription>
             </DialogHeader>
@@ -1460,7 +1473,7 @@ export default function MessagesPage() {
                 <Input
                   type="search"
                   placeholder="Search members..."
-                  className="pl-8"
+                  className={`pl-8 ${getInputClasses()}`}
                   value={newChatSearchTerm}
                   onChange={(e) => setNewChatSearchTerm(e.target.value)}
                 />
@@ -1468,11 +1481,12 @@ export default function MessagesPage() {
 
               {selectedMembers.length > 1 && (
                 <div>
-                  <Input
-                    placeholder="Group chat name..."
-                    value={groupChatName}
-                    onChange={(e) => setGroupChatName(e.target.value)}
-                  />
+                                  <Input
+                  placeholder="Group chat name..."
+                  value={groupChatName}
+                  onChange={(e) => setGroupChatName(e.target.value)}
+                  className={getInputClasses()}
+                />
                 </div>
               )}
 
@@ -1490,7 +1504,13 @@ export default function MessagesPage() {
                     return (
                       <div
                         key={member.id}
-                        className="flex items-center gap-3 p-3 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md border"
+                        className={`flex items-center gap-3 p-3 cursor-pointer rounded-md border ${
+                          theme === "dark" 
+                            ? "hover:bg-white/10 border-white/20" 
+                            : theme === "light" 
+                              ? "hover:bg-blue-50 border-blue-200/50" 
+                              : "hover:bg-gray-100 border-gray-200"
+                        }`}
                         onClick={() => {
                           if (isSelected) {
                             setSelectedMembers((prev) => prev.filter((id) => id !== member.id))
@@ -1519,7 +1539,7 @@ export default function MessagesPage() {
                           )}
                         </div>
                         <div className="flex-1">
-                          <p className="font-medium">{member.name}</p>
+                          <p className={`font-medium ${getTextColor()}`}>{member.name}</p>
                           <p className="text-xs text-green-600 dark:text-green-400">{isOnline ? "Online" : "Offline"}</p>
                         </div>
                       </div>
@@ -1528,18 +1548,18 @@ export default function MessagesPage() {
                 {members.filter(
                   (member) =>
                     member.id !== user?.id && member.name.toLowerCase().includes(debouncedNewChatSearch.toLowerCase()),
-                ).length === 0 && <div className="text-center py-4 text-slate-500">No members found</div>}
+                ).length === 0 && <div className={`text-center py-4 ${getMutedTextColor()}`}>No members found</div>}
               </div>
 
               {selectedMembers.length > 0 && (
-                <div className="text-sm text-slate-600 dark:text-slate-300">
+                <div className={`text-sm ${getSecondaryTextColor()}`}>
                   {selectedMembers.length} member{selectedMembers.length > 1 ? "s" : ""} selected
                   {selectedMembers.length > 1 && " (Group Chat)"}
                 </div>
               )}
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setShowNewChatDialog(false)}>
+              <Button variant="outline" onClick={() => setShowNewChatDialog(false)} className={getButtonClasses("outline")}>
                 Cancel
               </Button>
               <Button
@@ -1555,18 +1575,18 @@ export default function MessagesPage() {
 
         {/* Delete Conversation Dialog */}
         <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-          <DialogContent className="bg-slate-800 border-slate-700 text-white max-w-md shadow-2xl">
+          <DialogContent className={`max-w-md shadow-2xl ${getCardClasses()}`}>
             <DialogHeader>
-              <DialogTitle className="text-white">Delete Conversation</DialogTitle>
-              <DialogDescription className="text-slate-300">
+              <DialogTitle className={getTextColor()}>Delete Conversation</DialogTitle>
+              <DialogDescription className={getSecondaryTextColor()}>
                 Are you sure you want to delete this conversation? This action cannot be undone.
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setShowDeleteDialog(false)} className="bg-slate-700 hover:bg-slate-600 text-white">
+              <Button variant="outline" onClick={() => setShowDeleteDialog(false)} className={getButtonClasses("outline")}>
                 Cancel
               </Button>
-              <Button variant="destructive" onClick={handleDeleteConversation} className="bg-red-600 hover:bg-red-700 text-white">
+              <Button variant="destructive" onClick={handleDeleteConversation} className={getButtonClasses("destructive")}>
                 {deletingConversation ? "Deleting..." : "Delete"}
               </Button>
             </DialogFooter>

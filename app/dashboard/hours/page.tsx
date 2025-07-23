@@ -135,6 +135,19 @@ export default function HoursPage() {
     }
   }
 
+  // Get theme-aware dialog classes (solid colors for dark theme to avoid lag)
+  const getDialogClasses = () => {
+    switch (theme) {
+      case "original":
+        return "bg-white border border-gray-200 shadow-lg"
+      case "light":
+        return "bg-white/95 backdrop-blur-sm border border-blue-200/60 shadow-lg"
+      case "dark":
+      default:
+        return "bg-slate-800 border border-slate-700 shadow-lg"
+    }
+  }
+
   const checkIsAdmin = (user) => {
     if (!user || !user.roles) return false
     const adminRoles = ["Group Owner", "President", "Treasurer"]
@@ -711,7 +724,7 @@ export default function HoursPage() {
                   Log Hours
                 </Button>
               </DialogTrigger>
-              <DialogContent className={`${getCardClasses()} max-w-md`}>
+              <DialogContent className={`${getDialogClasses()} max-w-md`}>
                 <DialogHeader>
                   <DialogTitle className={getTextColor()}>Log Hours</DialogTitle>
                   <DialogDescription className={getSecondaryTextColor()}>
@@ -800,7 +813,7 @@ export default function HoursPage() {
                     Manage Requirements
                   </Button>
                 </DialogTrigger>
-                <DialogContent className={`${getCardClasses()} max-w-4xl max-h-[90vh] overflow-y-auto`}>
+                <DialogContent className={`${getDialogClasses()} max-w-4xl max-h-[90vh] overflow-y-auto`}>
                   <DialogHeader>
                     <DialogTitle className={getTextColor()}>Hour Requirements</DialogTitle>
                     <DialogDescription className={getSecondaryTextColor()}>
@@ -1147,7 +1160,7 @@ export default function HoursPage() {
                                 Add Member Hours
                               </Button>
                             </DialogTrigger>
-                            <DialogContent className={`${getCardClasses()} border-white/20`}>
+                            <DialogContent className={`${getDialogClasses()}`}>
                               <DialogHeader>
                                 <DialogTitle className={getTextColor()}>Add Hours for Member</DialogTitle>
                                 <DialogDescription className={getSecondaryTextColor()}>
@@ -1581,7 +1594,7 @@ export default function HoursPage() {
 
         {/* Create Hour Requirements Dialog */}
         <Dialog open={showCreateRequirementDialog} onOpenChange={setShowCreateRequirementDialog}>
-          <DialogContent className={`${getCardClasses()} max-w-md`}>
+          <DialogContent className={`${getDialogClasses()} max-w-md`}>
             <DialogHeader>
               <DialogTitle className={getTextColor()}>Create Hour Requirement</DialogTitle>
               <DialogDescription className={getSecondaryTextColor()}>

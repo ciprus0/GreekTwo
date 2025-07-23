@@ -1046,6 +1046,19 @@ export default function EventsPage() {
     }
   }
 
+  // Get theme-aware dialog classes (solid colors for dark theme to avoid lag)
+  const getDialogClasses = () => {
+    switch (theme) {
+      case "original":
+        return "bg-white border border-gray-200 shadow-lg"
+      case "light":
+        return "bg-white/95 backdrop-blur-sm border border-blue-200/60 shadow-lg"
+      case "dark":
+      default:
+        return "bg-slate-800 border border-slate-700 shadow-lg"
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen">
@@ -1078,7 +1091,7 @@ export default function EventsPage() {
                   Create Event
                 </Button>
               </DialogTrigger>
-              <DialogContent className={`sm:max-w-[550px] ${getCardClasses()}`}>
+              <DialogContent className={`sm:max-w-[550px] ${getDialogClasses()}`}>
                 <DialogHeader>
                   <DialogTitle className={getTextColor()}>{isEditMode ? "Edit Event" : "Create Event"}</DialogTitle>
                   <DialogDescription className={getSecondaryTextColor()}>
@@ -2081,7 +2094,7 @@ export default function EventsPage() {
 
       {/* Quick Event Creation Dialog */}
       <Dialog open={isQuickEventOpen} onOpenChange={setIsQuickEventOpen}>
-        <DialogContent className={`sm:max-w-[500px] ${getCardClasses()}`}>
+        <DialogContent className={`sm:max-w-[500px] ${getDialogClasses()}`}>
           <DialogHeader>
             <DialogTitle className={getTextColor()}>
               Create Event for {quickEventDate?.toLocaleDateString()}
@@ -2388,7 +2401,7 @@ export default function EventsPage() {
 
       {/* Multi-Event Dialog */}
       <Dialog open={isMultiEventDialogOpen} onOpenChange={setIsMultiEventDialogOpen}>
-        <DialogContent className={`sm:max-w-[400px] ${getCardClasses()}`}>
+        <DialogContent className={`sm:max-w-[400px] ${getDialogClasses()}`}>
           <DialogHeader>
             <DialogTitle className={getTextColor()}>
               {selectedDate?.toLocaleDateString(undefined, {
@@ -2486,7 +2499,7 @@ export default function EventsPage() {
 
       {/* Attendees Dialog */}
       <Dialog open={isAttendeesDialogOpen} onOpenChange={setIsAttendeesDialogOpen}>
-        <DialogContent className={`sm:max-w-[400px] ${getCardClasses()}`}>
+        <DialogContent className={`sm:max-w-[400px] ${getDialogClasses()}`}>
           <DialogHeader>
             <DialogTitle className={getTextColor()}>Event Attendees</DialogTitle>
             <DialogDescription className={getSecondaryTextColor()}>
@@ -2534,7 +2547,7 @@ export default function EventsPage() {
 
       {/* Image Preview Dialog */}
       <Dialog open={isImagePreviewOpen} onOpenChange={setIsImagePreviewOpen}>
-        <DialogContent className={`sm:max-w-[800px] ${getCardClasses()}`}>
+        <DialogContent className={`sm:max-w-[800px] ${getDialogClasses()}`}>
           <DialogHeader>
             <DialogTitle className={getTextColor()}>Image Preview</DialogTitle>
           </DialogHeader>

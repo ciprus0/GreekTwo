@@ -263,6 +263,19 @@ export default function GymPage() {
     }
   }
 
+  // Get theme-aware dialog classes (solid colors for dark theme to avoid lag)
+  const getDialogClasses = () => {
+    switch (theme) {
+      case "original":
+        return "bg-white border border-gray-200 shadow-lg"
+      case "light":
+        return "bg-white/95 backdrop-blur-sm border border-blue-200/60 shadow-lg"
+      case "dark":
+      default:
+        return "bg-slate-800 border border-slate-700 shadow-lg"
+    }
+  }
+
   /**
    * Stable location updater wrapped in `useCallback` so that it never changes
    * between renders.  This prevents the mounting geo-initialisation effect from
@@ -1391,7 +1404,7 @@ export default function GymPage() {
                         Add Location
                       </Button>
                     </DialogTrigger>
-                    <DialogContent className={`${getCardClasses()} sm:max-w-[900px] max-h-[90vh] overflow-y-auto shadow-2xl`}>
+                    <DialogContent className={`${getDialogClasses()} sm:max-w-[900px] max-h-[90vh] overflow-y-auto shadow-2xl`}>
                       <DialogHeader>
                         <DialogTitle className={getTextColor()}>Create New Gym Location</DialogTitle>
                         <DialogDescription className={getSecondaryTextColor()}>
@@ -1563,7 +1576,7 @@ export default function GymPage() {
                                   <Edit className="h-4 w-4" />
                                 </Button>
                               </DialogTrigger>
-                              <DialogContent className={`${getCardClasses()} sm:max-w-[500px] shadow-2xl`}>
+                              <DialogContent className={`${getDialogClasses()} sm:max-w-[500px] shadow-2xl`}>
                                 <DialogHeader>
                                   <DialogTitle className={getTextColor()}>Edit Gym Location</DialogTitle>
                                                                       <DialogDescription className={getSecondaryTextColor()}>
@@ -1682,7 +1695,7 @@ export default function GymPage() {
                         Add Requirement
                       </Button>
                     </DialogTrigger>
-                    <DialogContent className={`${getCardClasses()} sm:max-w-[600px] max-h-[90vh] overflow-y-auto shadow-2xl`}>
+                    <DialogContent className={`${getDialogClasses()} sm:max-w-[600px] max-h-[90vh] overflow-y-auto shadow-2xl`}>
                       <DialogHeader>
                         <DialogTitle className={getTextColor()}>Create Gym Hour Requirement</DialogTitle>
                         <DialogDescription className={getSecondaryTextColor()}>
