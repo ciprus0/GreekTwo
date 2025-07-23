@@ -1795,7 +1795,7 @@ export default function GymPage() {
             <p className={`text-sm ${getSecondaryTextColor()}`}>Visual representation of all gym locations and your current location.</p>
           </div>
           <div className="h-[500px]">
-            {!showCreateDialog && (
+            {!showCreateDialog && !showRequirementsDialog && (
               <MapComponent
                 userLocation={userLocation}
                 studyLocations={gymLocations}

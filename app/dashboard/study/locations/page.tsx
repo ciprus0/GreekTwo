@@ -207,19 +207,24 @@ export default function StudyLocationsPage() {
   }, [user, toast])
 
   const handleMapClick = (e) => {
+    console.log("Map click event:", e) // Debug log
+    
+    // Handle different event structures
+    const latlng = e.latlng || e
+    
     if (isMovingShape) {
       if (drawingCircle) {
         setDrawingCircle({
           ...drawingCircle,
-          center: { lat: e.latlng.lat, lng: e.latlng.lng },
+          center: { lat: latlng.lat, lng: latlng.lng },
         })
       } else if (drawingBox) {
         const latDiff = drawingBox.se.lat - drawingBox.nw.lat
         const lngDiff = drawingBox.se.lng - drawingBox.nw.lng
         setDrawingBox({
           ...drawingBox,
-          nw: { lat: e.latlng.lat, lng: e.latlng.lng },
-          se: { lat: e.latlng.lat + latDiff, lng: e.latlng.lng + lngDiff },
+          nw: { lat: latlng.lat, lng: latlng.lng },
+          se: { lat: latlng.lat + latDiff, lng: latlng.lng + lngDiff },
         })
       }
       setIsMovingShape(false)
@@ -233,13 +238,15 @@ export default function StudyLocationsPage() {
       setIsResizingShape(false)
       setClickMode(false)
     } else if (clickMode && drawingMode === "circle") {
+      console.log("Drawing circle, current state:", { drawingCircle, clickMode, drawingMode }) // Debug log
       if (!drawingCircle) {
         // First click - start drawing circle
         setDrawingCircle({
-          center: { lat: e.latlng.lat, lng: e.latlng.lng },
+          center: { lat: latlng.lat, lng: latlng.lng },
           radius: 100,
           isDrawing: true,
         })
+        console.log("Started drawing circle") // Debug log
       } else if (drawingCircle.isDrawing) {
         // Second click - finish drawing circle
         setDrawingCircle({
@@ -250,26 +257,30 @@ export default function StudyLocationsPage() {
         setDrawingMode(null)
         // Show form to enter name and address
         setShowLocationForm(true)
+        console.log("Finished drawing circle") // Debug log
       }
     } else if (clickMode && drawingMode === "box") {
+      console.log("Drawing box, current state:", { drawingBox, clickMode, drawingMode }) // Debug log
       if (!drawingBox) {
         // First click - start drawing box
         setDrawingBox({
-          nw: { lat: e.latlng.lat, lng: e.latlng.lng },
-          se: { lat: e.latlng.lat, lng: e.latlng.lng },
+          nw: { lat: latlng.lat, lng: latlng.lng },
+          se: { lat: latlng.lat, lng: latlng.lng },
           isDrawing: true,
         })
+        console.log("Started drawing box") // Debug log
       } else if (drawingBox.isDrawing) {
         // Second click - finish drawing box
         setDrawingBox({
           ...drawingBox,
-          se: { lat: e.latlng.lat, lng: e.latlng.lng },
+          se: { lat: latlng.lat, lng: latlng.lng },
           isDrawing: false,
         })
         setClickMode(false)
         setDrawingMode(null)
         // Show form to enter name and address
         setShowLocationForm(true)
+        console.log("Finished drawing box") // Debug log
       }
     }
   }
@@ -887,7 +898,7 @@ export default function StudyLocationsPage() {
                 <p className={`text-sm ${getSecondaryTextColor()}`}>Visual representation of all study locations and your current location.</p>
               </div>
               <div className="h-[500px]">
-                {!showCreateDialog && (
+                {!showCreateDialog && !showLocationForm && (
                   <MapComponent
                     userLocation={userLocation}
                     studyLocations={studyLocations}

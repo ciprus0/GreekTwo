@@ -138,7 +138,7 @@ export default function MessagesPage() {
               text: msg.text,
               timestamp: msg.created_at,
               reactions: msg.reactions || {},
-              attachments: msg.attachments ? msg.attachments.map((attachment: any) => ({
+              attachments: Array.isArray(msg.attachments) ? msg.attachments.map((attachment: any) => ({
                 id: attachment.id || Date.now().toString(),
                 name: attachment.name,
                 type: attachment.type,
@@ -167,6 +167,12 @@ export default function MessagesPage() {
     },
     [toast],
   )
+
+  // Get current messages for active chat
+  const currentMessages = useMemo(() => {
+    if (!activeChat || !chats[activeChat]) return []
+    return chats[activeChat] || []
+  }, [activeChat, chats])
 
   // Message sending function with proper message type handling
   const handleSendMessage = useCallback(async () => {
