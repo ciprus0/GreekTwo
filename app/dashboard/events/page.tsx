@@ -520,7 +520,15 @@ export default function EventsPage() {
 
       setIsQuickEventOpen(false)
       resetQuickEventData()
-      await loadEventsData() // This will refresh all events and the calendar
+      
+      // Immediately add the new event to the local state to show it on calendar
+      setEvents((prev) => {
+        const updatedEvents = [...prev, newEvent]
+        return updatedEvents.sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
+      })
+      
+      // Also reload data to ensure everything is in sync
+      await loadEventsData()
     } catch (error) {
       console.error("Error creating event:", error)
       toast({
@@ -836,6 +844,45 @@ export default function EventsPage() {
     if (!dateString) return ""
     const date = new Date(dateString)
     return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+  }
+
+  const formatEventDateTime = (startTime, endTime) => {
+    if (!startTime) return ""
+    
+    const start = new Date(startTime)
+    const end = endTime ? new Date(endTime) : null
+    
+    const startDate = start.toLocaleDateString("en-US", {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+    })
+    
+    const startTimeStr = start.toLocaleTimeString([], { 
+      hour: "2-digit", 
+      minute: "2-digit" 
+    })
+    
+    if (!end) {
+      return `${startDate} at ${startTimeStr}`
+    }
+    
+    const endTimeStr = end.toLocaleTimeString([], { 
+      hour: "2-digit", 
+      minute: "2-digit" 
+    })
+    
+    // Check if same day
+    if (start.toDateString() === end.toDateString()) {
+      return `${startDate} • ${startTimeStr} - ${endTimeStr}`
+    } else {
+      const endDate = end.toLocaleDateString("en-US", {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+      })
+      return `${startDate} ${startTimeStr} - ${endDate} ${endTimeStr}`
+    }
   }
 
   const monthName = currentMonth.toLocaleString("default", { month: "long", year: "numeric" })
@@ -1860,12 +1907,7 @@ export default function EventsPage() {
                       <CardTitle className={`truncate ${getTextColor()}`}>{selectedEvent.title}</CardTitle>
                       <div className={`flex items-center gap-2 mt-1 ${getSecondaryTextColor()}`}>
                         <CalendarIcon className="h-4 w-4" />
-                        <span>{formatDate(selectedEvent.start_time)}</span>
-                        <Clock className="h-4 w-4 ml-2" />
-                        <span>
-                          {formatTime(selectedEvent.start_time)}
-                          {selectedEvent.end_time && ` - ${formatTime(selectedEvent.end_time)}`}
-                        </span>
+                        <span>{formatEventDateTime(selectedEvent.start_time, selectedEvent.end_time)}</span>
                       </div>
                     </div>
                     <div className="flex items-center gap-2 ml-4">

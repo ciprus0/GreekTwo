@@ -335,6 +335,7 @@ export default function StudyLocationsPage() {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
     if (errors[name]) setErrors((prev) => ({ ...prev, [name]: "" }))
+    // Don't clear drawing state when typing in form inputs
   }
 
   const validateForm = () => {

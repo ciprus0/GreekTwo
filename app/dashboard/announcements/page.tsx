@@ -38,6 +38,8 @@ export default function AnnouncementsPage() {
   const [isChannelDialogOpen, setIsChannelDialogOpen] = useState(false)
   const [isManageChannelsDialogOpen, setIsManageChannelsDialogOpen] = useState(false)
   const [editingChannel, setEditingChannel] = useState<AnnouncementChannel | null>(null)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [editingAnnouncement, setEditingAnnouncement] = useState(null)
   const [formData, setFormData] = useState({
     title: "",
     content: "",
@@ -113,7 +115,29 @@ export default function AnnouncementsPage() {
               api.getAnnouncementsByOrganization(parsedUser.organizationId),
               api.getAnnouncementChannels(parsedUser.organizationId)
             ])
-            setAnnouncements(announcementsData)
+            
+            // Fetch author information for each announcement
+            const announcementsWithAuthors = await Promise.all(
+              announcementsData.map(async (announcement) => {
+                try {
+                  const author = await api.getMemberById(announcement.author_id)
+                  return {
+                    ...announcement,
+                    author_name: author?.name || announcement.author_name || "Unknown User",
+                    author_profile_picture: author?.profile_picture || announcement.author_profile_picture,
+                  }
+                } catch (error) {
+                  console.error(`Error fetching author for announcement ${announcement.id}:`, error)
+                  return {
+                    ...announcement,
+                    author_name: announcement.author_name || "Unknown User",
+                    author_profile_picture: announcement.author_profile_picture,
+                  }
+                }
+              })
+            )
+            
+            setAnnouncements(announcementsWithAuthors)
             setChannels(channelsData)
           }
         }
@@ -294,6 +318,62 @@ export default function AnnouncementsPage() {
     }
   }
 
+  const handleEditAnnouncement = (announcement) => {
+    setEditingAnnouncement(announcement)
+    setFormData({
+      title: announcement.title,
+      content: announcement.content,
+      channel: announcement.channel || announcement.category || "general",
+    })
+    setIsEditDialogOpen(true)
+  }
+
+  const handleUpdateAnnouncement = async () => {
+    if (!formData.title.trim() || !formData.content.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Please fill in all required fields.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      const updateData = {
+        title: formData.title,
+        content: formData.content,
+        category: formData.channel, // Keep for backward compatibility
+        channel: formData.channel,
+      }
+
+      const updatedAnnouncement = await api.updateAnnouncement(editingAnnouncement.id, updateData)
+      
+      // Update local state
+      setAnnouncements((prev) => 
+        prev.map((announcement) => 
+          announcement.id === editingAnnouncement.id 
+            ? { ...announcement, ...updatedAnnouncement }
+            : announcement
+        )
+      )
+      
+      setFormData({ title: "", content: "", channel: "general" })
+      setEditingAnnouncement(null)
+      setIsEditDialogOpen(false)
+      toast({
+        title: "Success",
+        description: "Announcement updated successfully.",
+      })
+    } catch (error) {
+      console.error("Error updating announcement:", error)
+      toast({
+        title: "Error",
+        description: "Failed to update announcement.",
+        variant: "destructive",
+      })
+    }
+  }
+
   const handleDeleteAnnouncement = async (id) => {
     try {
       await api.deleteAnnouncement(id)
@@ -310,6 +390,17 @@ export default function AnnouncementsPage() {
         variant: "destructive",
       })
     }
+  }
+
+  // Check if user can edit/delete an announcement
+  const canEditAnnouncement = (announcement) => {
+    if (!user) return false
+    return user.id === announcement.author_id || user.role === "admin" || user.role === "executive"
+  }
+
+  const canDeleteAnnouncement = (announcement) => {
+    if (!user) return false
+    return user.id === announcement.author_id || user.role === "admin" || user.role === "executive"
   }
 
   const formatDate = (timestamp) => {
@@ -503,13 +594,24 @@ export default function AnnouncementsPage() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              onClick={() => handleDeleteAnnouncement(announcement.id)}
-                              className="text-red-600"
-                            >
-                              <Trash className="mr-2 h-4 w-4" />
-                              Delete
-                            </DropdownMenuItem>
+                            {canEditAnnouncement(announcement) && (
+                              <DropdownMenuItem
+                                onClick={() => handleEditAnnouncement(announcement)}
+                                className="text-blue-600"
+                              >
+                                <Edit className="mr-2 h-4 w-4" />
+                                Edit
+                              </DropdownMenuItem>
+                            )}
+                            {canDeleteAnnouncement(announcement) && (
+                              <DropdownMenuItem
+                                onClick={() => handleDeleteAnnouncement(announcement.id)}
+                                className="text-red-600"
+                              >
+                                <Trash className="mr-2 h-4 w-4" />
+                                Delete
+                              </DropdownMenuItem>
+                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
@@ -697,6 +799,94 @@ export default function AnnouncementsPage() {
                 className={getButtonClasses("default")}
               >
                 {editingChannel ? "Update Channel" : "Create Channel"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Announcement Dialog */}
+        <Dialog open={isEditDialogOpen} onOpenChange={(open) => {
+          setIsEditDialogOpen(open)
+          if (!open) {
+            setEditingAnnouncement(null)
+            setFormData({ title: "", content: "", channel: "general" })
+          }
+        }}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle className={getTextColor()}>Edit Announcement</DialogTitle>
+              <DialogDescription className={getSecondaryTextColor()}>
+                Update the details of your announcement.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="edit-title" className={getTextColor()}>
+                  Title
+                </Label>
+                <Input
+                  id="edit-title"
+                  name="title"
+                  value={formData.title}
+                  onChange={handleInputChange}
+                  placeholder="Enter announcement title"
+                  className="glass-input"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="edit-channel" className={getTextColor()}>
+                  Channel
+                </Label>
+                <Select
+                  value={formData.channel}
+                  onValueChange={(value) => handleSelectChange("channel", value)}
+                >
+                  <SelectTrigger className="glass-input">
+                    <SelectValue placeholder="Select a channel" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {channels.map((channel) => (
+                      <SelectItem key={channel.id} value={channel.id}>
+                        <div className="flex items-center gap-2">
+                          <div 
+                            className="w-3 h-3 rounded-full" 
+                            style={{ backgroundColor: channel.color }}
+                          ></div>
+                          {channel.name}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="edit-content" className={getTextColor()}>
+                  Content
+                </Label>
+                <Textarea
+                  id="edit-content"
+                  name="content"
+                  value={formData.content}
+                  onChange={handleInputChange}
+                  placeholder="Enter announcement content"
+                  className="glass-input min-h-[120px]"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsEditDialogOpen(false)
+                  setEditingAnnouncement(null)
+                  setFormData({ title: "", content: "", channel: "general" })
+                }}
+                className={getButtonClasses("outline")}
+              >
+                Cancel
+              </Button>
+              <Button onClick={handleUpdateAnnouncement} className={getButtonClasses("default")}>
+                Update Announcement
               </Button>
             </DialogFooter>
           </DialogContent>

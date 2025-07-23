@@ -878,6 +878,28 @@ export default function MessagesPage() {
     }
   }, [activeChat, activeChatType, loadGroupMembers])
 
+  const handleShowGroupMembers = useCallback(async () => {
+    if (!activeChat || activeChatType !== "group" || !user || !mountedRef.current) return
+
+    try {
+      const groupChatId = activeChat.replace("group-", "")
+      const groupMembersData = await api.getGroupChatMembers(groupChatId)
+      if (mountedRef.current) {
+        setGroupMembers(groupMembersData)
+        setShowGroupMembersDialog(true)
+      }
+    } catch (error) {
+      console.error("Error fetching group members:", error)
+      if (mountedRef.current) {
+        toast({
+          title: "Error",
+          description: "Failed to load group members.",
+          variant: "destructive",
+        })
+      }
+    }
+  }, [activeChat, activeChatType, user, toast])
+
   const handleRemoveGroupMember = useCallback(
     async (memberId: string) => {
       if (!activeChat || !activeChatType === "group" || !user || !mountedRef.current) return
@@ -999,13 +1021,14 @@ export default function MessagesPage() {
                               height={40}
                               className="rounded-full object-cover"
                             />
-                            <AvatarFallback>
+                            <AvatarFallback className="bg-slate-600 text-white">
                               {conversation.type === "group"
                                 ? (conversation.groupChat?.name || conversation.name || "G").charAt(0).toUpperCase()
                                 : otherMember?.name
                                     ?.split(" ")
                                     .map((n) => n[0])
-                                    .join("") || "U"}
+                                    .join("")
+                                    .toUpperCase() || "U"}
                             </AvatarFallback>
                           </Avatar>
                           {onlineUsers.includes(conversation.type === "direct" ? conversation.id : "group") && (
@@ -1074,17 +1097,25 @@ export default function MessagesPage() {
                       height={32}
                       className="rounded-full object-cover"
                     />
-                    <AvatarFallback>
+                    <AvatarFallback className="bg-slate-600 text-white">
                       {activeChatType === "group"
                         ? (activeConversation?.groupChat?.name || activeConversation?.name || "G").charAt(0).toUpperCase()
                         : activeConversation?.name
                             ?.split(" ")
                             .map((n) => n[0])
-                            .join("") || "U"}
+                            .join("")
+                            .toUpperCase() || "U"}
                     </AvatarFallback>
                   </Avatar>
                   <div>
-                    <h2 className={`font-semibold ${getTextColor()}`}>
+                    <h2 
+                      className={`font-semibold ${getTextColor()} ${activeChatType === "group" ? "cursor-pointer hover:underline" : ""}`}
+                      onClick={() => {
+                        if (activeChatType === "group") {
+                          handleShowGroupMembers()
+                        }
+                      }}
+                    >
                       {activeChatType === "group"
                         ? activeConversation?.groupChat?.name || activeConversation?.name || "Group Chat"
                         : getActiveConversationMember()?.name || "Unknown User"}
@@ -1166,11 +1197,12 @@ export default function MessagesPage() {
                                     className="rounded-full object-cover"
                                     loading="lazy"
                                   />
-                                  <AvatarFallback>
+                                  <AvatarFallback className="bg-slate-600 text-white">
                                     {senderMember?.name
                                       ?.split(" ")
                                       .map((n) => n[0])
-                                      .join("") || ""}
+                                      .join("")
+                                      .toUpperCase() || "U"}
                                   </AvatarFallback>
                                 </Avatar>
                               )}

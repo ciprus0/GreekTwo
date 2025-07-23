@@ -26,6 +26,33 @@ export default function ClassesPage() {
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false)
   const [userData, setUserData] = useState<{ id: string; organizationId: string } | null>(null)
   const { getTextColor, getSecondaryTextColor, getMutedTextColor } = useTextColors()
+  const { theme } = useTheme()
+
+  // Get theme-aware card classes
+  const getCardClasses = () => {
+    switch (theme) {
+      case "original":
+        return "original-card"
+      case "light":
+        return "light-glass-card"
+      case "dark":
+      default:
+        return "glass-card border-white/20"
+    }
+  }
+
+  // Get theme-aware button classes
+  const getButtonClasses = (variant: "default" | "outline" | "ghost" | "link") => {
+    switch (theme) {
+      case "original":
+        return variant === "default" ? "original-button" : "original-button-outline"
+      case "light":
+        return variant === "default" ? "light-glass-button" : "light-glass-button-outline"
+      case "dark":
+      default:
+        return variant === "default" ? "glass-button" : "glass-button-outline"
+    }
+  }
 
   // Load user data from localStorage
   useEffect(() => {
@@ -245,25 +272,25 @@ export default function ClassesPage() {
             {filteredClasses.map((classItem) => (
               <Card
                 key={classItem.class_name}
-                className="cursor-pointer hover:shadow-md transition-shadow bg-slate-800/50 border-slate-700 hover:bg-slate-800/70"
+                className={`cursor-pointer hover:shadow-md transition-shadow ${getCardClasses()}`}
                 onClick={() => router.push(`/dashboard/library/classes/${encodeURIComponent(classItem.class_name)}`)}
               >
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
                     <BookOpen className="h-8 w-8 text-primary" />
-                    <span className="text-sm text-slate-400">
+                    <span className={`text-sm ${getMutedTextColor()}`}>
                       {classItem.file_count} file{classItem.file_count !== 1 ? "s" : ""}
                     </span>
                   </div>
-                  <CardTitle className="text-xl text-white">{classItem.class_name}</CardTitle>
-                  <CardDescription className="text-slate-400">
+                  <CardTitle className={`text-xl ${getTextColor()}`}>{classItem.class_name}</CardTitle>
+                  <CardDescription className={getSecondaryTextColor()}>
                     Last updated: {new Date(classItem.latest_file_date).toLocaleDateString()}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="pt-0">
                   <Button
                     variant="outline"
-                    className="w-full bg-transparent border-slate-600 text-slate-300 hover:bg-slate-700 hover:text-white"
+                    className={`w-full ${getButtonClasses("outline")}`}
                     size="sm"
                   >
                     Browse Files
