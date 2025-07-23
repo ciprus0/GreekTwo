@@ -711,7 +711,7 @@ export default function HoursPage() {
                   Log Hours
                 </Button>
               </DialogTrigger>
-              <DialogContent className="glass-dialog border-white/20">
+              <DialogContent className={`${getCardClasses()} max-w-md`}>
                 <DialogHeader>
                   <DialogTitle className={getTextColor()}>Log Hours</DialogTitle>
                   <DialogDescription className={getSecondaryTextColor()}>
@@ -724,10 +724,10 @@ export default function HoursPage() {
                       Hour Type
                     </Label>
                     <Select value={formData.type} onValueChange={(value) => handleSelectChange("type", value)}>
-                      <SelectTrigger id="type" className="glass-input">
+                      <SelectTrigger id="type" className={`${getCardClasses()} border-white/20`}>
                         <SelectValue placeholder="Select hour type" />
                       </SelectTrigger>
-                      <SelectContent className="glass-card border-white/20">
+                      <SelectContent className={`${getCardClasses()} border-white/20`}>
                         <SelectItem value="service">Service Hours</SelectItem>
                         <SelectItem value="chapter">Chapter Hours</SelectItem>
                       </SelectContent>
@@ -743,7 +743,7 @@ export default function HoursPage() {
                       type="date"
                       value={formData.date}
                       onChange={handleInputChange}
-                      className="glass-input"
+                      className={`${getCardClasses()} border-white/20`}
                     />
                   </div>
                   <div className="grid gap-2">
@@ -759,7 +759,7 @@ export default function HoursPage() {
                       placeholder="e.g., 2.5"
                       value={formData.hours}
                       onChange={handleInputChange}
-                      className="glass-input"
+                      className={`${getCardClasses()} border-white/20`}
                     />
                   </div>
                   <div className="grid gap-2">
@@ -770,7 +770,7 @@ export default function HoursPage() {
                       id="description"
                       name="description"
                       rows={3}
-                      className="glass-input min-h-[80px] resize-none"
+                      className={`${getCardClasses()} border-white/20 min-h-[80px] resize-none`}
                       placeholder="Describe the activity..."
                       value={formData.description}
                       onChange={handleInputChange}
@@ -781,11 +781,11 @@ export default function HoursPage() {
                   <Button
                     variant="outline"
                     onClick={() => setShowAddHoursDialog(false)}
-                    className="glass-button-outline"
+                    className={`${getButtonClasses("outline")}`}
                   >
                     Cancel
                   </Button>
-                  <Button className="glass-button" onClick={handleAddHours}>
+                  <Button className={`${getButtonClasses("default")}`} onClick={handleAddHours}>
                     Submit Hours
                   </Button>
                 </DialogFooter>
@@ -800,20 +800,18 @@ export default function HoursPage() {
                     Manage Requirements
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-3xl glass-dialog border-white/20">
+                <DialogContent className={`${getCardClasses()} max-w-4xl max-h-[90vh] overflow-y-auto`}>
                   <DialogHeader>
                     <DialogTitle className={getTextColor()}>Hour Requirements</DialogTitle>
                     <DialogDescription className={getSecondaryTextColor()}>
-                      Manage hour requirements for all types (Service, Chapter, Study).
+                      Manage hour requirements for your chapter members.
                     </DialogDescription>
                   </DialogHeader>
-                  <div className="py-4">
-                    <div className="space-y-4">
-                      {hourRequirements.length === 0 ? (
-                        <div className="text-center py-8 text-slate-400">No hour requirements are currently set.</div>
-                      ) : (
-                        hourRequirements.map((requirement) => (
-                          <div key={requirement.id} className={getCardClasses()}>
+                  <div className="space-y-4">
+                    {hourRequirements.length > 0 ? (
+                      <div className="grid gap-4">
+                        {hourRequirements.map((requirement) => (
+                          <div key={requirement.id} className={`${getCardClasses()} p-4`}>
                             <div className="flex items-center justify-between mb-2">
                               <div className="flex items-center gap-3">
                                 <span
@@ -830,7 +828,7 @@ export default function HoursPage() {
                                 <h3 className={`font-medium ${getTextColor()}`}>{requirement.name}</h3>
                               </div>
                               <div className="flex items-center gap-4">
-                                <span className="text-sm text-slate-300">{requirement.hoursRequired} hours</span>
+                                <span className={`text-sm ${getSecondaryTextColor()}`}>{requirement.hoursRequired} hours</span>
                                 {checkIsAdmin(user) && (
                                   <Button
                                     variant="ghost"
@@ -844,40 +842,29 @@ export default function HoursPage() {
                               </div>
                             </div>
                             {requirement.description && (
-                              <p className="text-sm text-slate-300 mb-2">{requirement.description}</p>
+                              <p className={`text-sm ${getSecondaryTextColor()}`}>{requirement.description}</p>
                             )}
-                            <div className="text-xs text-slate-400">
-                              Applies to:{" "}
-                              {requirement.targetUsers.length === 0
-                                ? "All Members"
-                                : `${requirement.targetUsers.length} specific member(s)`}
+                            <div className={`text-xs ${getMutedTextColor()}`}>
+                              Applies to: {requirement.targetUsers.length === 0 ? "All Members" : `${requirement.targetUsers.length} specific member(s)`}
                             </div>
                           </div>
-                        ))
-                      )}
-                    </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className={`text-sm ${getSecondaryTextColor()}`}>No hour requirements set.</p>
+                    )}
                   </div>
                   <DialogFooter>
-                    {checkIsAdmin(user) && (
-                      <Button
-                        onClick={() => {
-                          setNewRequirement({
-                            type: "service",
-                            hoursRequired: 40,
-                            targetUsers: [],
-                            name: "",
-                            description: "",
-                          })
-                          setSelectedMembers([])
-                          setShowRequirementsDialog(false)
-                          setTimeout(() => setShowCreateRequirementDialog(true), 100)
-                        }}
-                        className="glass-button"
-                      >
-                        <Plus className="mr-2 h-4 w-4" />
-                        Create New
-                      </Button>
-                    )}
+                    <Button
+                      onClick={() => {
+                        setShowRequirementsDialog(false)
+                        setTimeout(() => setShowCreateRequirementDialog(true), 100)
+                      }}
+                      className={`${getButtonClasses("default")}`}
+                    >
+                      <Plus className="mr-2 h-4 w-4" />
+                      Create New Requirement
+                    </Button>
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
@@ -1588,7 +1575,7 @@ export default function HoursPage() {
 
         {/* Create Hour Requirements Dialog */}
         <Dialog open={showCreateRequirementDialog} onOpenChange={setShowCreateRequirementDialog}>
-          <DialogContent className="max-w-md glass-dialog border-white/20">
+          <DialogContent className={`${getCardClasses()} max-w-md`}>
             <DialogHeader>
               <DialogTitle className={getTextColor()}>Create Hour Requirement</DialogTitle>
               <DialogDescription className={getSecondaryTextColor()}>
@@ -1604,10 +1591,10 @@ export default function HoursPage() {
                   value={newRequirement.type}
                   onValueChange={(value) => setNewRequirement({ ...newRequirement, type: value })}
                 >
-                  <SelectTrigger className="glass-input">
+                  <SelectTrigger className={`${getCardClasses()} border-white/20`}>
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="glass-card border-white/20">
+                  <SelectContent className={`${getCardClasses()} border-white/20`}>
                     <SelectItem value="service">Service Hours</SelectItem>
                     <SelectItem value="chapter">Chapter Hours</SelectItem>
                     <SelectItem value="study">Study Hours</SelectItem>
@@ -1622,8 +1609,8 @@ export default function HoursPage() {
                   id="requirement-name"
                   value={newRequirement.name}
                   onChange={(e) => setNewRequirement({ ...newRequirement, name: e.target.value })}
-                  placeholder="e.g., Freshman Service Hours"
-                  className="glass-input"
+                  placeholder="e.g., Weekly Service Hours"
+                  className={`${getCardClasses()} border-white/20`}
                 />
               </div>
               <div className="grid gap-2">
@@ -1634,8 +1621,8 @@ export default function HoursPage() {
                   id="requirement-description"
                   value={newRequirement.description}
                   onChange={(e) => setNewRequirement({ ...newRequirement, description: e.target.value })}
-                  placeholder="e.g., Service hours for first-year members"
-                  className="glass-input"
+                  placeholder="e.g., Minimum service hours per week"
+                  className={`${getCardClasses()} border-white/20`}
                 />
               </div>
               <div className="grid gap-2">
@@ -1649,7 +1636,7 @@ export default function HoursPage() {
                   max="100"
                   value={newRequirement.hoursRequired}
                   onChange={(e) => setNewRequirement({ ...newRequirement, hoursRequired: e.target.value })}
-                  className="glass-input"
+                  className={`${getCardClasses()} border-white/20`}
                 />
               </div>
               <div className="grid gap-2">
@@ -1665,7 +1652,7 @@ export default function HoursPage() {
                     }}
                     className="border-white/30 data-[state=checked]:bg-red-500 data-[state=checked]:border-red-500"
                   />
-                  <Label htmlFor="all-members" className="text-slate-300">
+                  <Label htmlFor="all-members" className={getSecondaryTextColor()}>
                     All Members
                   </Label>
                 </div>
@@ -1682,15 +1669,15 @@ export default function HoursPage() {
                     }}
                     className="border-white/30 data-[state=checked]:bg-red-500 data-[state=checked]:border-red-500"
                   />
-                  <Label htmlFor="specific-members" className="text-slate-300">
+                  <Label htmlFor="specific-members" className={getSecondaryTextColor()}>
                     Specific Members
                   </Label>
                 </div>
 
                 {selectedMembers.length > 0 && (
-                  <div className="mt-2 glass-card border-white/10 p-2 max-h-40 overflow-y-auto">
+                  <div className={`mt-2 ${getCardClasses()} border-white/10 p-2 max-h-40 overflow-y-auto`}>
                     {allMembers.map((member) => (
-                      <div key={member.id} className="flex items-center space-x-2 py-1">
+                      <div key={member.id} className="flex items-center space-x-2">
                         <Checkbox
                           id={`member-${member.id}`}
                           checked={selectedMembers.includes(member.id)}
@@ -1703,7 +1690,7 @@ export default function HoursPage() {
                           }}
                           className="border-white/30 data-[state=checked]:bg-red-500 data-[state=checked]:border-red-500"
                         />
-                        <Label htmlFor={`member-${member.id}`} className="text-slate-300">
+                        <Label htmlFor={`member-${member.id}`} className={`text-sm ${getSecondaryTextColor()}`}>
                           {member.name}
                         </Label>
                       </div>
@@ -1716,18 +1703,11 @@ export default function HoursPage() {
               <Button
                 variant="outline"
                 onClick={() => setShowCreateRequirementDialog(false)}
-                className="glass-button-outline"
+                className={`${getButtonClasses("outline")}`}
               >
                 Cancel
               </Button>
-              <Button
-                className="glass-button"
-                onClick={() => {
-                  handleCreateRequirement()
-                  setShowCreateRequirementDialog(false)
-                }}
-                disabled={!newRequirement.name || !newRequirement.hoursRequired}
-              >
+              <Button onClick={handleCreateRequirement} className={`${getButtonClasses("default")}`}>
                 Create Requirement
               </Button>
             </DialogFooter>
@@ -1737,3 +1717,5 @@ export default function HoursPage() {
     </ThemeWrapper>
   )
 }
+
+

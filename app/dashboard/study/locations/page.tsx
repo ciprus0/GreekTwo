@@ -67,6 +67,7 @@ export default function StudyLocationsPage() {
   const [drawingCircle, setDrawingCircle] = useState(null)
   const [isMovingShape, setIsMovingShape] = useState(false)
   const [isResizingShape, setIsResizingShape] = useState(false)
+  const [showLocationForm, setShowLocationForm] = useState(false)
   const [formData, setFormData] = useState({
     name: "",
     address: "",
@@ -233,32 +234,42 @@ export default function StudyLocationsPage() {
       setClickMode(false)
     } else if (clickMode && drawingMode === "circle") {
       if (!drawingCircle) {
+        // First click - start drawing circle
         setDrawingCircle({
           center: { lat: e.latlng.lat, lng: e.latlng.lng },
           radius: 100,
           isDrawing: true,
         })
       } else if (drawingCircle.isDrawing) {
+        // Second click - finish drawing circle
         setDrawingCircle({
           ...drawingCircle,
           isDrawing: false,
         })
         setClickMode(false)
+        setDrawingMode(null)
+        // Show form to enter name and address
+        setShowLocationForm(true)
       }
     } else if (clickMode && drawingMode === "box") {
       if (!drawingBox) {
+        // First click - start drawing box
         setDrawingBox({
           nw: { lat: e.latlng.lat, lng: e.latlng.lng },
           se: { lat: e.latlng.lat, lng: e.latlng.lng },
           isDrawing: true,
         })
       } else if (drawingBox.isDrawing) {
+        // Second click - finish drawing box
         setDrawingBox({
           ...drawingBox,
           se: { lat: e.latlng.lat, lng: e.latlng.lng },
           isDrawing: false,
         })
         setClickMode(false)
+        setDrawingMode(null)
+        // Show form to enter name and address
+        setShowLocationForm(true)
       }
     }
   }
@@ -401,6 +412,57 @@ export default function StudyLocationsPage() {
     setDrawingMode(null)
     setIsMovingShape(false)
     setIsResizingShape(false)
+    setShowLocationForm(false)
+    setFormData({
+      name: "",
+      address: "",
+      radius: 100,
+      size: 100,
+    })
+  }
+
+  const handleLocationFormSubmit = async () => {
+    if (!validateForm()) return
+
+    try {
+      const locationData = {
+        name: formData.name,
+        address: formData.address,
+        organization_id: user.organizationId,
+        created_by: user.id,
+      }
+
+      if (drawingCircle) {
+        locationData.lat = drawingCircle.center.lat
+        locationData.lng = drawingCircle.center.lng
+        locationData.radius = drawingCircle.radius
+        locationData.is_box = false
+      } else if (drawingBox) {
+        locationData.lat = (drawingBox.nw.lat + drawingBox.se.lat) / 2
+        locationData.lng = (drawingBox.nw.lng + drawingBox.se.lng) / 2
+        locationData.box_coordinates = drawingBox
+        locationData.is_box = true
+      }
+
+      const newLocation = await api.createStudyLocation(locationData)
+      setStudyLocations((prev) => [...prev, newLocation])
+      
+      // Clear everything and close dialog
+      clearDrawing()
+      setShowCreateDialog(false)
+      
+      toast({
+        title: "Location Created",
+        description: "Study location has been created successfully.",
+      })
+    } catch (error) {
+      console.error("Failed to create location:", error)
+      toast({
+        title: "Error",
+        description: "Could not create study location.",
+        variant: "destructive",
+      })
+    }
   }
 
   const handleInputChange = (e) => {
@@ -576,130 +638,176 @@ export default function StudyLocationsPage() {
                     <DialogHeader>
                       <DialogTitle className={getTextColor()}>Create New Study Location</DialogTitle>
                       <DialogDescription className={getSecondaryTextColor()}>
-                        Draw a shape on the map and fill in the details to create a new study location.
+                        {showLocationForm 
+                          ? "Enter the details for your study location."
+                          : "Draw a shape on the map and fill in the details to create a new study location."
+                        }
                       </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4">
-                      {/* Drawing Controls */}
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <Button
-                          variant={drawingMode === "circle" ? "default" : "outline"}
-                          size="sm"
-                          onClick={startDrawingCircle}
-                          className={
-                            drawingMode === "circle"
-                              ? "bg-rose-700 hover:bg-rose-800 text-white"
-                              : `${getButtonClasses("outline")}`
-                          }
-                        >
-                          <Circle className="mr-2 h-4 w-4" /> Circle
-                        </Button>
-                        <Button
-                          variant={drawingMode === "box" ? "default" : "outline"}
-                          size="sm"
-                          onClick={startDrawingBox}
-                          className={
-                            drawingMode === "box"
-                              ? "bg-rose-700 hover:bg-rose-800 text-white"
-                              : `${getButtonClasses("outline")}`
-                          }
-                        >
-                          <Square className="mr-2 h-4 w-4" /> Square
-                        </Button>
-                        <Button
-                          variant={drawingMode === "resize" ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => setDrawingMode("resize")}
-                          className={
-                            drawingMode === "resize"
-                              ? "bg-rose-700 hover:bg-rose-800 text-white"
-                              : `${getButtonClasses("outline")}`
-                          }
-                        >
-                          <Maximize2 className="mr-2 h-4 w-4" /> Resize
-                        </Button>
-                        <Button
-                          variant={drawingMode === "move" ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => setDrawingMode("move")}
-                          className={
-                            drawingMode === "move"
-                              ? "bg-rose-700 hover:bg-rose-800 text-white"
-                              : `${getButtonClasses("outline")}`
-                          }
-                        >
-                          <Move className="mr-2 h-4 w-4" /> Move
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={clearDrawing}
-                          className={`${getButtonClasses("outline")}`}
-                        >
-                          <X className="mr-2 h-4 w-4" /> Clear
-                        </Button>
-                      </div>
-
-                      {/* Map */}
-                      <div className="h-[400px] rounded-lg overflow-hidden border">
-                        <MapComponent
-                          userLocation={userLocation}
-                          studyLocations={studyLocations}
-                          onMapClick={handleMapClick}
-                          onMapMove={handleMapMove}
-                          clickMode={drawingMode === "circle" || drawingMode === "box"}
-                          drawingBox={drawingBox}
-                          drawingCircle={drawingCircle}
-                          mapRef={mapRef}
-                        />
-                      </div>
-
-                      {/* Form */}
-                      {(drawingCircle || drawingBox) && (
-                        <div className="grid gap-4">
-                          <div className="grid gap-2">
-                            <Label htmlFor="location-name" className={getTextColor()}>
-                              Location Name
-                            </Label>
-                            <Input
-                              id="location-name"
-                              name="name"
-                              value={formData.name}
-                              onChange={handleInputChange}
-                              placeholder="e.g., University Library"
-                              className={`${getCardClasses()} ${errors.name ? "border-red-500" : ""}`}
-                            />
-                            {errors.name && <p className="text-sm text-red-400">{errors.name}</p>}
-                          </div>
-                          <div className="grid gap-2">
-                            <Label htmlFor="location-description" className={getTextColor()}>
-                              Description
-                            </Label>
-                            <Input
-                              id="location-description"
-                              name="description"
-                              value={formData.description}
-                              onChange={handleInputChange}
-                              placeholder="e.g., Quiet study area with Wi-Fi"
-                              className={getCardClasses()}
-                            />
-                          </div>
-                          <div className="flex gap-2">
-                            <Button onClick={handleSaveLocation} className={`${getButtonClasses("default")}`}>
-                              Save Location
+                      {!showLocationForm ? (
+                        <>
+                          {/* Drawing Controls */}
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Button
+                              variant={drawingMode === "circle" ? "default" : "outline"}
+                              size="sm"
+                              onClick={startDrawingCircle}
+                              className={
+                                drawingMode === "circle"
+                                  ? "bg-rose-700 hover:bg-rose-800 text-white"
+                                  : `${getButtonClasses("outline")}`
+                              }
+                            >
+                              <Circle className="mr-2 h-4 w-4" /> Circle
+                            </Button>
+                            <Button
+                              variant={drawingMode === "box" ? "default" : "outline"}
+                              size="sm"
+                              onClick={startDrawingBox}
+                              className={
+                                drawingMode === "box"
+                                  ? "bg-rose-700 hover:bg-rose-800 text-white"
+                                  : `${getButtonClasses("outline")}`
+                              }
+                            >
+                              <Square className="mr-2 h-4 w-4" /> Square
+                            </Button>
+                            <Button
+                              variant={drawingMode === "resize" ? "default" : "outline"}
+                              size="sm"
+                              onClick={toggleResizeMode}
+                              className={
+                                drawingMode === "resize"
+                                  ? "bg-rose-700 hover:bg-rose-800 text-white"
+                                  : `${getButtonClasses("outline")}`
+                              }
+                            >
+                              <Resize className="mr-2 h-4 w-4" /> Resize
+                            </Button>
+                            <Button
+                              variant={drawingMode === "move" ? "default" : "outline"}
+                              size="sm"
+                              onClick={toggleMoveMode}
+                              className={
+                                drawingMode === "move"
+                                  ? "bg-rose-700 hover:bg-rose-800 text-white"
+                                  : `${getButtonClasses("outline")}`
+                              }
+                            >
+                              <Move className="mr-2 h-4 w-4" /> Move
                             </Button>
                             <Button
                               variant="outline"
-                              onClick={() => {
-                                clearDrawing()
-                                setShowCreateDialog(false)
-                              }}
+                              size="sm"
+                              onClick={clearDrawing}
                               className={`${getButtonClasses("outline")}`}
                             >
-                              Cancel
+                              <X className="mr-2 h-4 w-4" /> Clear
                             </Button>
                           </div>
-                        </div>
+
+                          {/* Map */}
+                          <div className="h-[500px] rounded-lg overflow-hidden border">
+                            <MapComponent
+                              userLocation={userLocation}
+                              studyLocations={studyLocations}
+                              onMapClick={handleMapClick}
+                              onMapMove={handleMapMove}
+                              clickMode={clickMode}
+                              drawingBox={drawingBox}
+                              drawingCircle={drawingCircle}
+                              isMovingShape={isMovingShape}
+                              isResizingShape={isResizingShape}
+                              mapRef={mapRef}
+                            />
+                          </div>
+
+                          {/* Instructions */}
+                          {clickMode && (
+                            <div className={`p-3 rounded-lg ${getCardClasses()}`}>
+                              <p className={`text-sm ${getSecondaryTextColor()}`}>
+                                {drawingMode === "circle" && !drawingCircle
+                                  ? "Click on the map to place the center of your circle, then drag to resize."
+                                  : drawingMode === "circle" && drawingCircle?.isDrawing
+                                  ? "Drag to resize the circle, then click to finish."
+                                  : drawingMode === "box" && !drawingBox
+                                  ? "Click on the map to place the corner of your box, then drag to resize."
+                                  : drawingMode === "box" && drawingBox?.isDrawing
+                                  ? "Drag to resize the box, then click to finish."
+                                  : "Click on the map to interact with the shape."
+                                }
+                              </p>
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          {/* Location Form */}
+                          <div className="space-y-4">
+                            <div className="grid gap-2">
+                              <Label htmlFor="name" className={getTextColor()}>
+                                Location Name *
+                              </Label>
+                              <Input
+                                id="name"
+                                name="name"
+                                value={formData.name}
+                                onChange={handleInputChange}
+                                placeholder="e.g., Library Study Room"
+                                className="glass-input"
+                              />
+                              {errors.name && <p className="text-red-500 text-sm">{errors.name}</p>}
+                            </div>
+                            <div className="grid gap-2">
+                              <Label htmlFor="address" className={getTextColor()}>
+                                Address
+                              </Label>
+                              <Input
+                                id="address"
+                                name="address"
+                                value={formData.address}
+                                onChange={handleInputChange}
+                                placeholder="e.g., 123 Main St, City, State"
+                                className="glass-input"
+                              />
+                              {errors.address && <p className="text-red-500 text-sm">{errors.address}</p>}
+                            </div>
+                            
+                            {/* Shape Preview */}
+                            <div className={`p-3 rounded-lg ${getCardClasses()}`}>
+                              <p className={`text-sm font-medium ${getTextColor()}`}>Shape Preview:</p>
+                              <p className={`text-sm ${getSecondaryTextColor()}`}>
+                                {drawingCircle 
+                                  ? `Circle with radius: ${Math.round(drawingCircle.radius)}m`
+                                  : drawingBox 
+                                  ? `Rectangle from (${drawingBox.nw.lat.toFixed(4)}, ${drawingBox.nw.lng.toFixed(4)}) to (${drawingBox.se.lat.toFixed(4)}, ${drawingBox.se.lng.toFixed(4)})`
+                                  : "No shape drawn"
+                                }
+                              </p>
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                    <div className="flex justify-end gap-2 pt-4">
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          clearDrawing()
+                          setShowCreateDialog(false)
+                        }}
+                        className={`${getButtonClasses("outline")}`}
+                      >
+                        Cancel
+                      </Button>
+                      {showLocationForm && (
+                        <Button
+                          onClick={handleLocationFormSubmit}
+                          className={`${getButtonClasses("default")}`}
+                        >
+                          Create Location
+                        </Button>
                       )}
                     </div>
                   </DialogContent>

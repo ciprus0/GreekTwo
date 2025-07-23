@@ -1177,17 +1177,19 @@ export default function MessagesPage() {
                                 )}
 
                                 {/* Message content */}
-                                <div className="space-y-1">
+                                <div className="space-y-2">
                                   {msg.text && (
-                                    <p className={`text-sm ${getTextColor()} whitespace-pre-wrap leading-relaxed ${isCurrentUser ? "bg-red-500 text-white rounded-lg px-3 py-2" : "bg-slate-100 rounded-lg px-3 py-2"}`}>
-                                      {msg.text}
-                                    </p>
+                                    <div className={`inline-block max-w-[85%] lg:max-w-[70%] ${isCurrentUser ? "ml-auto" : ""}`}>
+                                      <p className={`text-sm ${getTextColor()} whitespace-pre-wrap leading-relaxed ${isCurrentUser ? "bg-red-500 text-white rounded-lg px-3 py-2" : "bg-slate-100 rounded-lg px-3 py-2"}`}>
+                                        {msg.text}
+                                      </p>
+                                    </div>
                                   )}
 
                                   {msg.attachments && Array.isArray(msg.attachments) && msg.attachments.length > 0 && (
-                                    <div className="space-y-2">
+                                    <div className={`space-y-2 ${isCurrentUser ? "text-right" : ""}`}>
                                       {msg.attachments.map((attachment) => (
-                                        <div key={attachment.id} className="rounded border overflow-hidden max-w-full">
+                                        <div key={attachment.id} className={`inline-block max-w-[85%] lg:max-w-[70%] rounded border overflow-hidden ${isCurrentUser ? "ml-auto" : ""}`}>
                                           {attachment.type === "image" ? (
                                             <a href={attachment.url} target="_blank" rel="noopener noreferrer">
                                               <img
@@ -1212,120 +1214,6 @@ export default function MessagesPage() {
                                       ))}
                                     </div>
                                   )}
-
-                                  {/* Reactions */}
-                                  <div className="flex flex-wrap items-center gap-1 mt-1">
-                                    {msg.reactions && Object.keys(msg.reactions).length > 0 && (
-                                      <>
-                                        {Object.entries(msg.reactions).map(([emoji, users]) => (
-                                          <TooltipProvider key={emoji}>
-                                            <Tooltip>
-                                              <TooltipTrigger asChild>
-                                                <Badge
-                                                  variant="outline"
-                                                  className={`px-2 py-0.5 cursor-pointer hover:bg-slate-100 ${
-                                                    users.includes(user?.id) ? "bg-rose-50 border-rose-200" : ""
-                                                  }`}
-                                                  onClick={() => handleAddReaction(msg.id, emoji)}
-                                                >
-                                                  {emoji} {users.length}
-                                                </Badge>
-                                              </TooltipTrigger>
-                                              <TooltipContent>
-                                                <p>
-                                                  {users
-                                                    .map((userId) => {
-                                                      const reactUser =
-                                                        userId === user?.id
-                                                          ? "You"
-                                                          : members.find((m) => m.id === userId)?.name || "Unknown"
-                                                      return reactUser
-                                                    })
-                                                    .join(", ")}
-                                                </p>
-                                              </TooltipContent>
-                                            </Tooltip>
-                                          </TooltipProvider>
-                                        ))}
-                                      </>
-                                    )}
-
-                                    {/* Add Reaction Button */}
-                                    {(hoveredMessage === msg.id || reactionMessage === msg.id) && (
-                                      <Popover
-                                        open={reactionMessage === msg.id}
-                                        onOpenChange={(open) => {
-                                          if (open) {
-                                            setReactionMessage(msg.id)
-                                          } else {
-                                            setReactionMessage(null)
-                                          }
-                                        }}
-                                      >
-                                        <PopoverTrigger asChild>
-                                          <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            className="h-6 w-6 p-0 opacity-70 hover:opacity-100 transition-opacity"
-                                            onClick={() => setReactionMessage(msg.id)}
-                                          >
-                                            <Plus className="h-3 w-3" />
-                                          </Button>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-80 p-4" align="start">
-                                          <div className="space-y-3">
-                                            <div className="flex flex-wrap gap-1">
-                                              {QUICK_REACTIONS.map((emoji) => (
-                                                <Button
-                                                  key={emoji}
-                                                  variant="ghost"
-                                                  size="sm"
-                                                  className="h-8 w-8 p-0"
-                                                  onClick={() => {
-                                                    handleAddReaction(msg.id, emoji)
-                                                    setReactionMessage(null)
-                                                  }}
-                                                >
-                                                  {emoji}
-                                                </Button>
-                                              ))}
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                              <Input
-                                                placeholder="Type any emoji..."
-                                                className="glass-input flex-1"
-                                                onKeyPress={(e) => {
-                                                  if (e.key === "Enter" && e.target.value.trim()) {
-                                                    handleAddReaction(msg.id, e.target.value.trim())
-                                                    e.target.value = ""
-                                                    setReactionMessage(null)
-                                                  }
-                                                }}
-                                              />
-                                              <Button
-                                                size="sm"
-                                                onClick={() => {
-                                                  // Open native emoji picker if supported
-                                                  if (navigator.userAgent.includes("Windows")) {
-                                                    // Windows emoji picker shortcut
-                                                    document.dispatchEvent(
-                                                      new KeyboardEvent("keydown", {
-                                                        key: ".",
-                                                        code: "Period",
-                                                        metaKey: true,
-                                                      }),
-                                                    )
-                                                  }
-                                                }}
-                                              >
-                                                😀
-                                              </Button>
-                                            </div>
-                                          </div>
-                                        </PopoverContent>
-                                      </Popover>
-                                    )}
-                                  </div>
                                 </div>
                               </div>
                             </div>
