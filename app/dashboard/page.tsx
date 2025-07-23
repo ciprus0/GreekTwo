@@ -60,7 +60,7 @@ const MemoizedProgressCard = memo(({ title, current, goal, icon, type }) => {
   )
 })
 
-const MemoizedEventCard = memo(({ event, onClick }) => {
+const MemoizedEventCard = memo(({ event, onClick, theme }) => {
   const { getTextColor, getSecondaryTextColor } = useTextColors()
 
   const formatDate = useCallback((dateString) => {
@@ -111,7 +111,7 @@ const MemoizedEventCard = memo(({ event, onClick }) => {
   )
 })
 
-const MemoizedAnnouncementCard = memo(({ announcement }) => {
+const MemoizedAnnouncementCard = memo(({ announcement, theme }) => {
   const { getTextColor, getSecondaryTextColor, getMutedTextColor } = useTextColors()
 
   const formatDate = useCallback((timestamp) => {
@@ -147,7 +147,7 @@ const MemoizedAnnouncementCard = memo(({ announcement }) => {
   )
 })
 
-const MemoizedMessageCard = memo(({ message, onClick, formatTime }) => {
+const MemoizedMessageCard = memo(({ message, onClick, formatTime, theme }) => {
   const { getTextColor, getSecondaryTextColor, getMutedTextColor } = useTextColors()
 
   return (
@@ -686,7 +686,7 @@ export default function DashboardPage() {
               <div className="space-y-3">
                 {events.length > 0 ? (
                   events.map((event, index) => (
-                    <MemoizedEventCard key={event.id || index} event={event} onClick={handleEventClick} />
+                    <MemoizedEventCard key={event.id || index} event={event} onClick={handleEventClick} theme={theme} />
                   ))
                 ) : (
                   <div className={`text-center py-2 text-sm ${getMutedTextColor()}`}>No upcoming events</div>
@@ -743,7 +743,7 @@ export default function DashboardPage() {
                         announcements
                           .slice(0, 3)
                           .map((announcement) => (
-                            <MemoizedAnnouncementCard key={announcement.id} announcement={announcement} />
+                            <MemoizedAnnouncementCard key={announcement.id} announcement={announcement} theme={theme} />
                           ))
                       ) : (
                         <div className={`p-8 text-center ${getMutedTextColor()}`}>No announcements yet</div>
@@ -864,6 +864,7 @@ export default function DashboardPage() {
                         message={message}
                         onClick={handleMessageClick}
                         formatTime={formatTime}
+                        theme={theme}
                       />
                     ))
                   )}
