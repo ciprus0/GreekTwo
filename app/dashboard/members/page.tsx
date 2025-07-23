@@ -395,6 +395,18 @@ export default function MembersPage() {
     }
   }
 
+  const getInputClasses = () => {
+    switch (theme) {
+      case "original":
+        return "original-input"
+      case "light":
+        return "light-glass-input"
+      case "dark":
+      default:
+        return "glass-input"
+    }
+  }
+
   const getTabClasses = () => {
     switch (theme) {
       case "original":
@@ -542,12 +554,12 @@ export default function MembersPage() {
           <Card className={getCardClasses()}>
             <CardContent className="p-4">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 ${getMutedTextColor()}`} />
                 <Input
                   placeholder="Search members..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
+                  className={`pl-10 ${getInputClasses()}`}
                 />
               </div>
             </CardContent>
@@ -770,12 +782,12 @@ export default function MembersPage() {
             <Card className={getCardClasses()}>
               <CardContent className="p-4">
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                  <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 ${getMutedTextColor()}`} />
                   <Input
                     placeholder="Search pending members..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
+                    className={`pl-10 ${getInputClasses()}`}
                   />
                 </div>
               </CardContent>

@@ -1147,7 +1147,7 @@ export default function HoursPage() {
                                 Add Member Hours
                               </Button>
                             </DialogTrigger>
-                            <DialogContent className="glass-dialog border-white/20">
+                            <DialogContent className={`${getCardClasses()} border-white/20`}>
                               <DialogHeader>
                                 <DialogTitle className={getTextColor()}>Add Hours for Member</DialogTitle>
                                 <DialogDescription className={getSecondaryTextColor()}>

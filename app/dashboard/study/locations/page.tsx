@@ -34,6 +34,7 @@ import dynamic from "next/dynamic"
 import { api } from "@/lib/supabase-api"
 import type { StudyLocation } from "@/types"
 import { ThemeWrapper, useTextColors } from "@/components/theme-wrapper"
+import { useTheme } from "@/lib/theme-context"
 
 const MapComponent = dynamic(() => import("@/components/map-component"), {
   ssr: false,
@@ -74,6 +75,46 @@ export default function StudyLocationsPage() {
   const [showEditDialog, setShowEditDialog] = useState(false)
 
   const { getTextColor, getSecondaryTextColor, getMutedTextColor } = useTextColors()
+  const { theme } = useTheme()
+
+  // Get theme-aware card classes
+  const getCardClasses = () => {
+    switch (theme) {
+      case "original":
+        return "original-card"
+      case "light":
+        return "light-glass-card"
+      case "dark":
+      default:
+        return "glass-card border-white/20"
+    }
+  }
+
+  // Get theme-aware input classes
+  const getInputClasses = () => {
+    switch (theme) {
+      case "original":
+        return "original-input"
+      case "light":
+        return "light-glass-input"
+      case "dark":
+      default:
+        return "glass-input"
+    }
+  }
+
+  // Get theme-aware button classes
+  const getButtonClasses = (variant: "default" | "outline" | "ghost" | "link") => {
+    switch (theme) {
+      case "original":
+        return variant === "default" ? "original-button" : "original-button-outline"
+      case "light":
+        return variant === "default" ? "light-glass-button" : "light-glass-button-outline"
+      case "dark":
+      default:
+        return variant === "default" ? "glass-button" : "glass-button-outline"
+    }
+  }
 
   // Effect to load user from localStorage
   useEffect(() => {
@@ -506,7 +547,7 @@ export default function StudyLocationsPage() {
                     Create New Study Location
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto shadow-2xl">
+                <DialogContent className={`sm:max-w-[900px] max-h-[90vh] overflow-y-auto shadow-2xl ${getCardClasses()}`}>
                   <DialogHeader>
                     <DialogTitle>Create New Study Location</DialogTitle>
                     <DialogDescription>
@@ -592,7 +633,7 @@ export default function StudyLocationsPage() {
                             value={formData.name}
                             onChange={handleInputChange}
                             placeholder="e.g., University Library"
-                            className={errors.name ? "border-red-500" : ""}
+                            className={`${getInputClasses()} ${errors.name ? "border-red-500" : ""}`}
                           />
                           {errors.name && <p className="text-sm text-red-400">{errors.name}</p>}
                         </div>
@@ -606,10 +647,14 @@ export default function StudyLocationsPage() {
                             value={formData.address}
                             onChange={handleInputChange}
                             placeholder="e.g., 123 University Ave"
+                            className={getInputClasses()}
                           />
                         </div>
                         <div className="flex gap-2">
-                          <Button onClick={handleSaveLocation}>
+                          <Button 
+                            onClick={handleSaveLocation}
+                            className={getButtonClasses("default")}
+                          >
                             Save Location
                           </Button>
                           <Button
@@ -618,6 +663,7 @@ export default function StudyLocationsPage() {
                               clearDrawing()
                               setShowCreateDialog(false)
                             }}
+                            className={getButtonClasses("outline")}
                           >
                             Cancel
                           </Button>
@@ -703,7 +749,7 @@ export default function StudyLocationsPage() {
                                   <Edit className="h-4 w-4" />
                                 </Button>
                               </DialogTrigger>
-                              <DialogContent className="sm:max-w-[500px] shadow-2xl">
+                              <DialogContent className={`sm:max-w-[500px] shadow-2xl ${getCardClasses()}`}>
                                 <DialogHeader>
                                   <DialogTitle>Edit Study Location</DialogTitle>
                                   <DialogDescription>
@@ -720,7 +766,7 @@ export default function StudyLocationsPage() {
                                       name="name"
                                       value={formData.name}
                                       onChange={handleInputChange}
-                                      className={errors.name ? "border-red-500" : ""}
+                                      className={`${getInputClasses()} ${errors.name ? "border-red-500" : ""}`}
                                     />
                                     {errors.name && <p className="text-sm text-red-400">{errors.name}</p>}
                                   </div>
@@ -733,6 +779,7 @@ export default function StudyLocationsPage() {
                                       name="address"
                                       value={formData.address}
                                       onChange={handleInputChange}
+                                      className={getInputClasses()}
                                     />
                                   </div>
                                   {!editingLocation?.is_box && (
@@ -760,10 +807,14 @@ export default function StudyLocationsPage() {
                                       setShowEditDialog(false)
                                       setEditingLocation(null)
                                     }}
+                                    className={getButtonClasses("outline")}
                                   >
                                     Cancel
                                   </Button>
-                                  <Button onClick={handleUpdateLocation}>
+                                  <Button 
+                                    onClick={handleUpdateLocation}
+                                    className={getButtonClasses("default")}
+                                  >
                                     Update Location
                                   </Button>
                                 </div>

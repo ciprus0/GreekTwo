@@ -93,7 +93,9 @@ const MemoizedEventCard = memo(({ event, onClick }) => {
 
   return (
     <div
-      className="flex justify-between items-start cursor-pointer hover:bg-gray-50 p-2 rounded-md transition-colors gap-2"
+      className={`flex justify-between items-start cursor-pointer p-2 rounded-md transition-colors gap-2 ${
+        theme === "original" ? "hover:bg-gray-50" : theme === "light" ? "hover:bg-blue-50/30" : "hover:bg-white/5"
+      }`}
       onClick={() => onClick(event)}
     >
       <div className="flex items-start gap-2 flex-1 min-w-0">
@@ -126,7 +128,9 @@ const MemoizedAnnouncementCard = memo(({ announcement }) => {
   }, [announcement.content])
 
   return (
-    <div className="p-4 hover:bg-gray-50 transition-colors">
+                    <div className={`p-4 transition-colors ${
+                  theme === "original" ? "hover:bg-gray-50" : theme === "light" ? "hover:bg-blue-50/30" : "hover:bg-white/5"
+                }`}>
       <div className="flex items-start gap-3 mb-2">
         <CustomAvatar src={null} name={announcement.author_name} size="sm" className="flex-shrink-0" />
         <div className="flex-1 min-w-0">
@@ -149,7 +153,9 @@ const MemoizedMessageCard = memo(({ message, onClick, formatTime }) => {
   return (
     <div
       onClick={() => onClick(message)}
-      className="flex items-center gap-3 p-4 hover:bg-gray-50 transition-colors cursor-pointer"
+                        className={`flex items-center gap-3 p-4 transition-colors cursor-pointer ${
+                    theme === "original" ? "hover:bg-gray-50" : theme === "light" ? "hover:bg-blue-50/30" : "hover:bg-white/5"
+                  }`}
     >
       <CustomAvatar src={null} name={message.memberName} size="sm" className="flex-shrink-0" />
       <div className="flex-1 min-w-0">
@@ -897,7 +903,9 @@ export default function DashboardPage() {
                     <div className={`text-center py-8 ${getMutedTextColor()} text-sm`}>No chapter members yet</div>
                   ) : (
                     members.slice(0, 4).map((member) => (
-                      <div key={member.id} className="flex items-center gap-3 p-4 hover:bg-gray-50 transition-colors">
+                      <div key={member.id} className={`flex items-center gap-3 p-4 transition-colors ${
+                  theme === "original" ? "hover:bg-gray-50" : theme === "light" ? "hover:bg-blue-50/30" : "hover:bg-white/5"
+                }`}>
                         <CustomAvatar src={null} name={member.name} size="sm" className="flex-shrink-0" />
                         <div className="flex-1 min-w-0">
                           <p className={`text-sm font-medium truncate ${getTextColor()}`}>{member.name}</p>

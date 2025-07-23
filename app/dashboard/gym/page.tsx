@@ -1563,10 +1563,10 @@ export default function GymPage() {
                                   <Edit className="h-4 w-4" />
                                 </Button>
                               </DialogTrigger>
-                              <DialogContent className="bg-slate-800 border-slate-700 text-white sm:max-w-[500px] shadow-2xl">
+                              <DialogContent className={`${getCardClasses()} sm:max-w-[500px] shadow-2xl`}>
                                 <DialogHeader>
-                                  <DialogTitle className="text-white">Edit Gym Location</DialogTitle>
-                                  <DialogDescription className="text-slate-300">
+                                  <DialogTitle className={getTextColor()}>Edit Gym Location</DialogTitle>
+                                                                      <DialogDescription className={getSecondaryTextColor()}>
                                     Update the details of this gym location.
                                   </DialogDescription>
                                 </DialogHeader>
