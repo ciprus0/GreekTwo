@@ -1,0 +1,45 @@
+/* Custom Leaflet Styles */
+.leaflet-container {
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.leaflet-control-zoom {
+  border: none !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+}
+
+.leaflet-control-zoom a {
+  border-radius: 4px !important;
+  margin-bottom: 4px;
+}
+
+.user-location-marker {
+  filter: hue-rotate(0deg);
+}
+
+.study-location-marker {
+  filter: hue-rotate(140deg);
+}
+
+.leaflet-interactive {
+  cursor: pointer;
+}
+
+.leaflet-interactive.leaflet-editing-move {
+  cursor: move;
+}
+
+.leaflet-interactive.leaflet-editing-resize {
+  cursor: nwse-resize;
+}
+
+/* Fix for continuous flashing */
+.leaflet-marker-pane {
+  transition: none !important;
+}
+
+.leaflet-marker-icon {
+  transition: none !important;
+}
