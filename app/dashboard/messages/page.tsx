@@ -6,7 +6,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Search, Send, Paperclip, MoreVertical, ImageIcon, File, X, Plus, Users, ArrowLeft } from "lucide-react"
+import { Search, Send, Paperclip, MoreVertical, ImageIcon, File, X, Plus, Users, ArrowLeft, Trash, MessageSquare } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
@@ -75,6 +75,7 @@ export default function MessagesPage() {
   const [activeConversation, setActiveConversation] = useState(null)
   const [removingMember, setRemovingMember] = useState(null)
   const mountedRef = useRef(true)
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
 
   const { getTextColor, getSecondaryTextColor, getMutedTextColor, getAccentTextColor } = useTextColors()
   const { theme } = useTheme()
@@ -92,11 +93,24 @@ export default function MessagesPage() {
     }
   }
 
+  // Get theme-aware button classes
+  const getButtonClasses = (variant: "default" | "outline" | "ghost" | "link") => {
+    switch (theme) {
+      case "original":
+        return "original-button"
+      case "light":
+        return "light-button"
+      case "dark":
+      default:
+        return "glass-button"
+    }
+  }
+
   // Debounced search to reduce API calls
   const debouncedSearchTerm = useDebounce(searchTerm, 300)
   const debouncedNewChatSearch = useDebounce(newChatSearchTerm, 300)
 
-  // Load all conversations for the current user
+  // Enhanced conversation loading with proper attachment handling
   const loadAllConversations = useCallback(
     async (userId: string, organizationId: string) => {
       if (!mountedRef.current) return
@@ -113,7 +127,7 @@ export default function MessagesPage() {
         if (mountedRef.current) {
           setConversations(processedConversations)
 
-          // Convert conversations to our chat format
+          // Convert conversations to our chat format with proper attachment handling
           const formattedChats: Record<string, any[]> = {}
 
           for (const conversation of processedConversations) {
@@ -124,7 +138,13 @@ export default function MessagesPage() {
               text: msg.text,
               timestamp: msg.created_at,
               reactions: msg.reactions || {},
-              attachments: msg.attachments || [],
+              attachments: msg.attachments ? msg.attachments.map((attachment: any) => ({
+                id: attachment.id || Date.now().toString(),
+                name: attachment.name,
+                type: attachment.type,
+                size: attachment.size,
+                url: attachment.url, // This should be the Supabase storage URL
+              })) : [],
             }))
 
             formattedChats[chatId] = messages.sort(
@@ -894,423 +914,394 @@ export default function MessagesPage() {
 
   return (
     <ThemeWrapper>
-      <div className="space-y-6 p-4 md:p-6">
-        <div>
-          <h1 className={`text-2xl font-bold tracking-tight ${getTextColor()}`}>Messages</h1>
-          <p className={`text-muted-foreground ${getMutedTextColor()}`}>Communicate with your chapter members.</p>
-        </div>
-
-        {loading ? (
-          <div className="flex items-center justify-center h-[calc(100vh-220px)]">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-rose-700 mx-auto mb-4"></div>
-              <p className={`${getSecondaryTextColor()}`}>Loading messages...</p>
+      <div className="flex h-[calc(100vh-80px)] bg-slate-50 dark:bg-slate-900">
+        {/* Sidebar - Discord style */}
+        <div className="w-80 bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 flex flex-col">
+          {/* Header */}
+          <div className="p-4 border-b border-slate-200 dark:border-slate-700">
+            <div className="flex items-center justify-between">
+              <h1 className={`text-xl font-bold ${getTextColor()}`}>Messages</h1>
+              <Button
+                onClick={() => setShowNewChatDialog(true)}
+                className={`${getButtonClasses("default")} h-8 w-8 p-0`}
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
             </div>
           </div>
-        ) : (
-          <div className="flex flex-col lg:grid lg:grid-cols-3 gap-6 h-[calc(100vh-220px)]">
-            {/* Conversations List - Hidden on mobile when chat is active */}
-            <div className={`${activeChat ? 'hidden lg:block' : 'block'} lg:col-span-1 ${getCardClasses()} overflow-hidden`}>
-              <div className="p-4 border-b flex items-center justify-between">
-                <div className="relative flex-1 mr-2">
-                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-500" />
-                  <Input
-                    type="search"
-                    placeholder="Search messages..."
-                    className="glass-input pl-8"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
-                </div>
-                <Button size="sm" className="glass-button" onClick={() => setShowNewChatDialog(true)}>
-                  <Plus className="h-4 w-4" />
-                </Button>
+
+          {/* Search */}
+          <div className="p-4 border-b border-slate-200 dark:border-slate-700">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Input
+                placeholder="Search conversations..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className={`pl-10 ${getCardClasses()} border-slate-200 dark:border-slate-700`}
+              />
+            </div>
+          </div>
+
+          {/* Conversations List */}
+          <div className="flex-1 overflow-y-auto">
+            {loading ? (
+              <div className="flex items-center justify-center h-32">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-red-500"></div>
               </div>
+            ) : filteredConversations.length === 0 ? (
+              <div className="p-4 text-center">
+                <p className={`text-sm ${getSecondaryTextColor()}`}>No conversations found</p>
+              </div>
+            ) : (
+              <div className="space-y-1 p-2">
+                {filteredConversations.map((conversation) => {
+                  const isActive = activeChat === conversation.id
+                  const lastMessage = conversation.messages?.[conversation.messages.length - 1]
+                  const otherMember = conversation.type === "direct" 
+                    ? members.find((m) => m.id === conversation.id)
+                    : null
 
-              <div className="overflow-y-auto h-[calc(100%-65px)]">
-                {filteredConversations.length === 0 ? (
-                  <div className={`p-4 text-center ${getMutedTextColor()}`}>
-                    <p>No conversations yet</p>
-                    <p className="text-xs mt-1">Start a new conversation to see it here</p>
-                  </div>
-                ) : (
-                  filteredConversations.map((conversation) => {
-                    const lastMessage = getLastMessage(conversation)
-                    const hasUnread = lastMessage && lastMessage.senderId !== user?.id && !lastMessage.read
-                    const isGroup = conversation.type === "group"
-                    const conversationName = getConversationName(conversation)
-                    const avatarSrc = getConversationAvatar(conversation)
-
-                    return (
-                      <div
-                        key={conversation.id}
-                        className={`flex items-center gap-3 p-4 cursor-pointer hover:bg-white/5 transition-colors ${activeChat === conversation.id ? "bg-red-500/10 border-r-2 border-red-500" : ""}`}
-                        onClick={() => {
-                          setActiveChat(conversation.id)
-                          setActiveChatType(conversation.type || "direct")
-                        }}
-                      >
+                  return (
+                    <div
+                      key={conversation.id}
+                      onClick={() => {
+                        setActiveChat(conversation.id)
+                        setActiveChatType(conversation.type)
+                      }}
+                      className={`p-3 rounded-lg cursor-pointer transition-colors ${
+                        isActive
+                          ? "bg-red-500 text-white"
+                          : `hover:bg-slate-100 dark:hover:bg-slate-700 ${getCardClasses()}`
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
                         <div className="relative">
-                          {isGroup ? (
-                            <div className="w-10 h-10 bg-slate-200 rounded-full flex items-center justify-center">
-                              <Users className="h-5 w-5 text-slate-600" />
-                            </div>
-                          ) : (
-                            <Avatar>
-                              <NextImage
-                                src={avatarSrc || "/placeholder.svg?height=40&width=40"}
-                                alt={conversationName}
-                                width={40}
-                                height={40}
-                                className="rounded-full object-cover"
-                                loading="lazy"
-                              />
-                              <AvatarFallback>
-                                {conversationName
-                                  .split(" ")
-                                  .map((n) => n[0])
-                                  .join("")}
-                              </AvatarFallback>
-                            </Avatar>
-                          )}
-                          {!isGroup && conversation.participants && (
-                            <>
-                              {onlineUsers.includes(conversation.participants.find((id) => id !== user?.id)) && (
-                                <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
-                              )}
-                            </>
+                          <Avatar className="h-10 w-10">
+                            <NextImage
+                              src={
+                                conversation.type === "group"
+                                  ? "/placeholder.svg?height=40&width=40"
+                                  : otherMember?.profile_picture || "/placeholder.svg?height=40&width=40"
+                              }
+                              alt={
+                                conversation.type === "group"
+                                  ? conversation.name || "Group"
+                                  : otherMember?.name || "Unknown"
+                              }
+                              width={40}
+                              height={40}
+                              className="rounded-full object-cover"
+                            />
+                            <AvatarFallback>
+                              {conversation.type === "group"
+                                ? (conversation.name || "G").charAt(0).toUpperCase()
+                                : otherMember?.name
+                                    ?.split(" ")
+                                    .map((n) => n[0])
+                                    .join("") || "U"}
+                            </AvatarFallback>
+                          </Avatar>
+                          {onlineUsers.includes(conversation.type === "direct" ? conversation.id : "group") && (
+                            <div className="absolute -bottom-1 -right-1 h-3 w-3 bg-green-500 border-2 border-white dark:border-slate-800 rounded-full"></div>
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between">
-                            <p className={`font-medium flex items-center gap-1 ${getTextColor()}`}>
-                              {conversationName}
-                              {isGroup && <Users className="h-3 w-3 text-slate-500" />}
+                            <p className={`font-medium truncate ${isActive ? "text-white" : getTextColor()}`}>
+                              {conversation.type === "group"
+                                ? conversation.name || "Group Chat"
+                                : otherMember?.name || "Unknown User"}
                             </p>
-                            <p className={`text-xs ${getMutedTextColor()}`}>
-                              {lastMessage ? formatDate(lastMessage.timestamp) : ""}
-                            </p>
+                            {lastMessage && (
+                              <span className={`text-xs ${isActive ? "text-white/70" : getMutedTextColor()}`}>
+                                {formatDateTime(lastMessage.timestamp)}
+                              </span>
+                            )}
                           </div>
-                          <p className={`text-sm ${getSecondaryTextColor()} truncate`}>
-                            {lastMessage
-                              ? (lastMessage.attachments && Array.isArray(lastMessage.attachments) && lastMessage.attachments.length > 0)
-                                ? `${lastMessage.attachments.length} attachment${lastMessage.attachments.length > 1 ? "s" : ""}${lastMessage.text ? `: ${lastMessage.text}` : ""}`
-                                : lastMessage.text
-                              : "No messages yet"}
-                          </p>
+                          {lastMessage && (
+                            <p className={`text-sm truncate ${isActive ? "text-white/70" : getSecondaryTextColor()}`}>
+                              {lastMessage.text || (lastMessage.attachments?.length > 0 ? "📎 Attachment" : "")}
+                            </p>
+                          )}
                         </div>
-                        {hasUnread && <div className="w-2 h-2 bg-rose-700 rounded-full"></div>}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Main Chat Area */}
+        <div className="flex-1 flex flex-col bg-white dark:bg-slate-800">
+          {activeChat ? (
+            <>
+              {/* Chat Header */}
+              <div className="p-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setActiveChat(null)
+                      setActiveChatType(null)
+                    }}
+                    className="md:hidden"
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                  </Button>
+                  <Avatar className="h-8 w-8">
+                    <NextImage
+                      src={
+                        activeChatType === "group"
+                          ? "/placeholder.svg?height=32&width=32"
+                          : activeConversation?.profile_picture || "/placeholder.svg?height=32&width=32"
+                      }
+                      alt={
+                        activeChatType === "group"
+                          ? activeConversation?.name || "Group"
+                          : activeConversation?.name || "Unknown"
+                      }
+                      width={32}
+                      height={32}
+                      className="rounded-full object-cover"
+                    />
+                    <AvatarFallback>
+                      {activeChatType === "group"
+                        ? (activeConversation?.name || "G").charAt(0).toUpperCase()
+                        : activeConversation?.name
+                            ?.split(" ")
+                            .map((n) => n[0])
+                            .join("") || "U"}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <h2 className={`font-semibold ${getTextColor()}`}>
+                      {activeChatType === "group"
+                        ? activeConversation?.name || "Group Chat"
+                        : activeConversation?.name || "Unknown User"}
+                    </h2>
+                    <p className={`text-sm ${getSecondaryTextColor()}`}>
+                      {activeChatType === "group"
+                        ? `${activeConversation?.messages?.length || 0} messages`
+                        : onlineUsers.includes(activeChat) ? "Online" : "Offline"}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowDeleteDialog(true)}
+                    className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10"
+                  >
+                    <Trash className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* Messages Area */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                {currentMessages.length === 0 ? (
+                  <div className="flex items-center justify-center h-full">
+                    <div className="text-center">
+                      <MessageSquare className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+                      <p className={`text-lg font-medium ${getTextColor()}`}>No messages yet</p>
+                      <p className={`text-sm ${getSecondaryTextColor()}`}>Start the conversation!</p>
+                    </div>
+                  </div>
+                ) : (
+                  currentMessages.map((msg, index) => {
+                    const senderMember = members.find((m) => m.id === msg.senderId)
+                    const isCurrentUser = msg.senderId === user?.id
+                    const showSenderInfo = index === 0 || currentMessages[index - 1]?.senderId !== msg.senderId
+
+                    return (
+                      <div
+                        key={msg.id}
+                        className={`group hover:bg-slate-50/50 dark:hover:bg-slate-700/50 px-2 py-1 rounded ${showSenderInfo ? "mt-4" : "mt-0.5"}`}
+                        onMouseEnter={() => setHoveredMessage(msg.id)}
+                        onMouseLeave={() => setHoveredMessage(null)}
+                      >
+                        <div className="flex gap-3">
+                          {/* Avatar - only show for first message in group */}
+                          <div className="w-8 lg:w-10 flex-shrink-0">
+                            {showSenderInfo && (
+                              <Avatar className="w-8 h-8 lg:w-10 lg:h-10">
+                                <NextImage
+                                  src={senderMember?.profile_picture || "/placeholder.svg?height=40&width=40"}
+                                  alt={senderMember?.name || ""}
+                                  width={40}
+                                  height={40}
+                                  className="rounded-full object-cover"
+                                  loading="lazy"
+                                />
+                                <AvatarFallback>
+                                  {senderMember?.name
+                                    ?.split(" ")
+                                    .map((n) => n[0])
+                                    .join("") || ""}
+                                </AvatarFallback>
+                              </Avatar>
+                            )}
+                          </div>
+
+                          <div className="flex-1 min-w-0">
+                            {/* Username and timestamp - only show for first message in group */}
+                            {showSenderInfo && (
+                              <div className="flex items-baseline gap-2 mb-1">
+                                <span className={`font-medium text-sm ${getTextColor()}`}>
+                                  {senderMember?.name || "Unknown User"}
+                                </span>
+                                <span className={`text-xs ${getMutedTextColor()}`}>
+                                  {formatDateTime(msg.timestamp)}
+                                </span>
+                              </div>
+                            )}
+
+                            {/* Message content */}
+                            <div className="space-y-2">
+                              {msg.text && (
+                                <div className={`inline-block max-w-[85%] lg:max-w-[70%] ${isCurrentUser ? "ml-auto" : ""}`}>
+                                  <p className={`text-sm ${getTextColor()} whitespace-pre-wrap leading-relaxed ${isCurrentUser ? "bg-red-500 text-white rounded-lg px-3 py-2" : "bg-slate-100 dark:bg-slate-700 rounded-lg px-3 py-2"}`}>
+                                    {msg.text}
+                                  </p>
+                                </div>
+                              )}
+
+                              {msg.attachments && Array.isArray(msg.attachments) && msg.attachments.length > 0 && (
+                                <div className={`space-y-2 ${isCurrentUser ? "text-right" : ""}`}>
+                                  {msg.attachments.map((attachment) => (
+                                    <div key={attachment.id} className={`inline-block max-w-[85%] lg:max-w-[70%] rounded border overflow-hidden ${isCurrentUser ? "ml-auto" : ""}`}>
+                                      {attachment.type === "image" ? (
+                                        <a href={attachment.url} target="_blank" rel="noopener noreferrer">
+                                          <img
+                                            src={attachment.url || "/placeholder.svg"}
+                                            alt={attachment.name}
+                                            className="max-w-full max-h-[300px] object-contain"
+                                            onError={(e) => {
+                                              console.error("Failed to load image:", attachment.url)
+                                              e.currentTarget.src = "/placeholder.svg"
+                                            }}
+                                          />
+                                        </a>
+                                      ) : (
+                                        <a
+                                          href={attachment.url}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="flex items-center gap-2 p-3 hover:bg-slate-50 dark:hover:bg-slate-700"
+                                        >
+                                          <File className="h-4 w-4" />
+                                          <span className="text-sm">{attachment.name}</span>
+                                          <span className="text-xs text-slate-500">({formatFileSize(attachment.size)})</span>
+                                        </a>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     )
                   })
                 )}
+                <div ref={messagesEndRef} />
               </div>
-            </div>
 
-            {/* Chat Area */}
-            <div className={`${activeChat ? 'block' : 'hidden lg:block'} lg:col-span-2 ${getCardClasses()} flex flex-col`}>
-              {activeChat ? (
-                <>
-                  {/* Chat Header */}
-                  <div className="p-4 border-b flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      {/* Back button for mobile */}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="lg:hidden"
-                        onClick={() => setActiveChat(null)}
+              {/* Message Input */}
+              <div className="p-4 border-t border-slate-200 dark:border-slate-700">
+                <div className="flex items-end gap-2">
+                  <div className="flex-1 relative">
+                    <textarea
+                      value={message}
+                      onChange={(e) => setMessage(e.target.value)}
+                      onKeyPress={handleKeyPress}
+                      placeholder="Type a message..."
+                      className={`w-full resize-none rounded-lg border border-slate-200 dark:border-slate-700 p-3 pr-12 ${getCardClasses()} focus:ring-2 focus:ring-red-500 focus:border-transparent`}
+                      rows={1}
+                      style={{ minHeight: "44px", maxHeight: "120px" }}
+                    />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="absolute right-2 bottom-2 h-8 w-8 p-0 text-slate-400 hover:text-slate-600"
+                    >
+                      <Paperclip className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <Button
+                    onClick={handleSendMessage}
+                    disabled={(!message.trim() && attachments.length === 0) || !activeChat}
+                    className={`${getButtonClasses("default")} h-10 w-10 p-0`}
+                  >
+                    <Send className="h-4 w-4" />
+                  </Button>
+                </div>
+
+                {/* Attachments Preview */}
+                {attachments.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {attachments.map((attachment) => (
+                      <div
+                        key={attachment.id}
+                        className="flex items-center gap-2 p-2 bg-slate-100 dark:bg-slate-700 rounded-lg"
                       >
-                        <ArrowLeft className="h-5 w-5" />
-                      </Button>
-                      
-                      {activeChatType === "group" ? (
-                        <Avatar>
-                          <div className="w-10 h-10 bg-slate-200 rounded-full flex items-center justify-center">
-                            <Users className="h-5 w-5 text-slate-600" />
-                          </div>
-                        </Avatar>
-                      ) : (
-                        <Avatar>
-                          {getActiveConversationMember() ? (
-                            <>
-                              <NextImage
-                                src={
-                                  getActiveConversationMember()?.profile_picture ||
-                                  "/placeholder.svg?height=40&width=40"
-                                }
-                                alt={getActiveConversationMember()?.name || ""}
-                                width={40}
-                                height={40}
-                                className="rounded-full object-cover"
-                                loading="lazy"
-                              />
-                              <AvatarFallback>
-                                {getActiveConversationMember()
-                                  ?.name?.split(" ")
-                                  .map((n) => n[0])
-                                  .join("") || ""}
-                              </AvatarFallback>
-                            </>
-                          ) : (
-                            <>
-                              <AvatarImage src="/placeholder.svg?height=40&width=40" alt="Unknown" />
-                              <AvatarFallback>??</AvatarFallback>
-                            </>
-                          )}
-                        </Avatar>
-                      )}
-                      <div>
-                        <p className={`font-medium flex items-center gap-1 ${getTextColor()}`}>
-                          {activeChatType === "group"
-                            ? activeConversation?.groupChat?.name || "Group Chat"
-                            : getActiveConversationMember()?.name || "Unknown User"}
-                          {activeChatType === "group" && <Users className="h-3 w-3 text-slate-500 ml-1" />}
-                        </p>
-                        {activeChatType !== "group" && (
-                          <p className="text-xs text-green-600">
-                            {onlineUsers.includes(activeChat) ? "Online" : "Offline"}
-                          </p>
+                        {attachment.type === "image" ? (
+                          <img
+                            src={attachment.url}
+                            alt={attachment.name}
+                            className="h-8 w-8 object-cover rounded"
+                          />
+                        ) : (
+                          <File className="h-4 w-4" />
                         )}
-                        {activeChatType === "group" && user?.id === activeConversation?.groupChat?.created_by && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                            onClick={() => setShowGroupMembersDialog(true)}
-                          >
-                            Manage Members
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <MoreVertical className="h-5 w-5" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={handleDeleteConversation}
-                            disabled={deletingConversation}
-                            className="text-red-600 focus:text-red-600"
-                          >
-                            {deletingConversation ? "Deleting..." : "Delete Conversation"}
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </div>
-
-                  <div className="flex-1 overflow-y-auto p-4 space-y-2">
-                    {getMessages(activeChat).length === 0 ? (
-                      <div className={`h-full flex items-center justify-center ${getMutedTextColor()}`}>
-                        <p>No messages yet. Start a conversation!</p>
-                      </div>
-                    ) : (
-                      groupMessagesByDate(getMessages(activeChat)).map((item) => {
-                        if (item.type === "date-separator") {
-                          return (
-                            <div key={item.id} className="flex justify-center my-4">
-                              <div className="bg-slate-100 text-slate-600 text-xs px-3 py-1 rounded-full">
-                                {formatDateSeparator(item.date)}
-                              </div>
-                            </div>
-                          )
-                        }
-
-                        const msg = item
-                        const isCurrentUser = msg.senderId === user?.id
-                        let senderMember = isCurrentUser ? user : null
-
-                        if (!isCurrentUser) {
-                          if (activeChatType === "group") {
-                            senderMember = members.find((m) => m.id === msg.senderId)
-                          } else {
-                            senderMember = members.find((m) => m.id === activeChat)
-                          }
-                        }
-
-                        return (
-                          <div
-                            key={msg.id}
-                            className={`group hover:bg-slate-50/50 px-2 py-1 rounded ${msg.showSenderInfo ? "mt-4" : "mt-0.5"}`}
-                            onMouseEnter={() => setHoveredMessage(msg.id)}
-                            onMouseLeave={() => setHoveredMessage(null)}
-                          >
-                            <div className="flex gap-3">
-                              {/* Avatar - only show for first message in group */}
-                              <div className="w-8 lg:w-10 flex-shrink-0">
-                                {msg.showSenderInfo && (
-                                  <Avatar className="w-8 h-8 lg:w-10 lg:h-10">
-                                    <NextImage
-                                      src={senderMember?.profile_picture || "/placeholder.svg?height=40&width=40"}
-                                      alt={senderMember?.name || ""}
-                                      width={40}
-                                      height={40}
-                                      className="rounded-full object-cover"
-                                      loading="lazy"
-                                    />
-                                    <AvatarFallback>
-                                      {senderMember?.name
-                                        ?.split(" ")
-                                        .map((n) => n[0])
-                                        .join("") || ""}
-                                    </AvatarFallback>
-                                  </Avatar>
-                                )}
-                              </div>
-
-                              <div className="flex-1 min-w-0">
-                                {/* Username and timestamp - only show for first message in group */}
-                                {msg.showSenderInfo && (
-                                  <div className="flex items-baseline gap-2 mb-1">
-                                    <span className={`font-medium text-sm ${getTextColor()}`}>
-                                      {senderMember?.name || "Unknown User"}
-                                    </span>
-                                    <span className={`text-xs ${getMutedTextColor()}`}>
-                                      {formatDateTime(msg.timestamp)}
-                                    </span>
-                                  </div>
-                                )}
-
-                                {/* Message content */}
-                                <div className="space-y-2">
-                                  {msg.text && (
-                                    <div className={`inline-block max-w-[85%] lg:max-w-[70%] ${isCurrentUser ? "ml-auto" : ""}`}>
-                                      <p className={`text-sm ${getTextColor()} whitespace-pre-wrap leading-relaxed ${isCurrentUser ? "bg-red-500 text-white rounded-lg px-3 py-2" : "bg-slate-100 rounded-lg px-3 py-2"}`}>
-                                        {msg.text}
-                                      </p>
-                                    </div>
-                                  )}
-
-                                  {msg.attachments && Array.isArray(msg.attachments) && msg.attachments.length > 0 && (
-                                    <div className={`space-y-2 ${isCurrentUser ? "text-right" : ""}`}>
-                                      {msg.attachments.map((attachment) => (
-                                        <div key={attachment.id} className={`inline-block max-w-[85%] lg:max-w-[70%] rounded border overflow-hidden ${isCurrentUser ? "ml-auto" : ""}`}>
-                                          {attachment.type === "image" ? (
-                                            <a href={attachment.url} target="_blank" rel="noopener noreferrer">
-                                              <img
-                                                src={attachment.url || "/placeholder.svg"}
-                                                alt={attachment.name}
-                                                className="max-w-full max-h-[300px] object-contain"
-                                              />
-                                            </a>
-                                          ) : (
-                                            <a
-                                              href={attachment.url}
-                                              target="_blank"
-                                              rel="noopener noreferrer"
-                                              className="flex items-center gap-2 p-3 hover:bg-slate-50"
-                                            >
-                                              <File className="h-4 w-4" />
-                                              <span className="text-sm">{attachment.name}</span>
-                                              <span className="text-xs text-slate-500">({formatFileSize(attachment.size)})</span>
-                                            </a>
-                                          )}
-                                        </div>
-                                      ))}
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        )
-                      })
-                    )}
-                    <div ref={messagesEndRef} />
-                  </div>
-
-                  <div className="p-4 border-t">
-                    {attachments && Array.isArray(attachments) && attachments.length > 0 && (
-                      <div className="flex flex-wrap gap-2 mb-3">
-                        {attachments.map((attachment) => (
-                          <div key={attachment.id} className="relative group">
-                            <div className="border rounded p-1 bg-slate-50">
-                              {attachment.type === "image" ? (
-                                <div className="relative w-16 h-16">
-                                  <img
-                                    src={attachment.url || "/placeholder.svg"}
-                                    alt={attachment.name}
-                                    className="w-full h-full object-cover rounded"
-                                  />
-                                </div>
-                              ) : (
-                                <div className="w-16 h-16 flex items-center justify-center">
-                                  <File className="h-8 w-8 text-slate-400" />
-                                </div>
-                              )}
-                            </div>
-                            <button
-                              className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
-                              onClick={() => removeAttachment(attachment.id)}
-                            >
-                              <X className="h-3 w-3" />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    <div className="flex items-end gap-2">
-                      <div className="flex items-center gap-1">
-                        <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileChange} multiple />
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          onClick={() => fileInputRef.current?.click()}
-                          className="p-2"
-                        >
-                          <Paperclip className="h-5 w-5" />
-                        </Button>
+                        <span className="text-sm truncate max-w-32">{attachment.name}</span>
                         <Button
                           variant="ghost"
-                          size="icon"
-                          onClick={() => {
-                            if (fileInputRef.current) {
-                              fileInputRef.current.accept = "image/*"
-                              fileInputRef.current.click()
-                            }
-                          }}
-                          className="p-2"
+                          size="sm"
+                          onClick={() => removeAttachment(attachment.id)}
+                          className="h-6 w-6 p-0 text-red-500 hover:text-red-600"
                         >
-                          <ImageIcon className="h-5 w-5" />
+                          <X className="h-3 w-3" />
                         </Button>
                       </div>
-                      <div className="relative flex-1">
-                        <textarea
-                          placeholder="Type a message..."
-                          className={`glass-input w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 min-h-[40px] max-h-[120px] resize-none ${theme === "dark" ? "text-white" : "text-gray-900"}`}
-                          value={message}
-                          onChange={(e) => setMessage(e.target.value)}
-                          onKeyPress={handleKeyPress}
-                        />
-                      </div>
-                      <Button
-                        size="icon"
-                        className="glass-button p-2"
-                        onClick={handleSendMessage}
-                        disabled={!message.trim() && attachments.length === 0}
-                      >
-                        <Send className="h-4 w-4" />
-                      </Button>
-                    </div>
+                    ))}
                   </div>
-                </>
-              ) : (
-                <div className={`h-full flex items-center justify-center ${getMutedTextColor()} p-4 text-center`}>
-                  <div>
-                    <p className="mb-2">Select a conversation to start messaging</p>
-                    <p className="text-sm">Or search for a member to start a new conversation</p>
-                  </div>
-                </div>
-              )}
+                )}
+              </div>
+            </>
+          ) : (
+            /* Welcome Screen */
+            <div className="flex-1 flex items-center justify-center">
+              <div className="text-center">
+                <MessageSquare className="h-16 w-16 text-slate-400 mx-auto mb-4" />
+                <h2 className={`text-2xl font-bold ${getTextColor()} mb-2`}>Welcome to Messages</h2>
+                <p className={`text-sm ${getSecondaryTextColor()} mb-4`}>Select a conversation to start messaging</p>
+                <Button onClick={() => setShowNewChatDialog(true)} className={`${getButtonClasses("default")}`}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Start New Conversation
+                </Button>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
+
+        {/* Hidden file input */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          onChange={handleFileChange}
+          className="hidden"
+          accept="image/*,.pdf,.doc,.docx,.txt"
+        />
+      </div>
 
         {/* Group Members Dialog */}
         <Dialog open={showGroupMembersDialog} onOpenChange={setShowGroupMembersDialog}>
@@ -1510,7 +1501,26 @@ export default function MessagesPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      </div>
+
+        {/* Delete Conversation Dialog */}
+        <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+          <DialogContent className="bg-slate-800 border-slate-700 text-white max-w-md shadow-2xl">
+            <DialogHeader>
+              <DialogTitle className="text-white">Delete Conversation</DialogTitle>
+              <DialogDescription className="text-slate-300">
+                Are you sure you want to delete this conversation? This action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowDeleteDialog(false)} className="bg-slate-700 hover:bg-slate-600 text-white">
+                Cancel
+              </Button>
+              <Button variant="destructive" onClick={handleDeleteConversation} className="bg-red-600 hover:bg-red-700 text-white">
+                {deletingConversation ? "Deleting..." : "Delete"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
     </ThemeWrapper>
   )
 }

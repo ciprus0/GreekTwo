@@ -187,19 +187,33 @@ export default function MapComponent({
     }
 
     // Add new drawing
-    if (drawingBox && drawingBox.bounds) {
-      const bounds = [
-        [drawingBox.bounds.south, drawingBox.bounds.west],
-        [drawingBox.bounds.north, drawingBox.bounds.east],
-      ]
-      const box = L.rectangle(bounds, {
-        color: "#ef4444",
-        fillColor: "#ef4444",
-        fillOpacity: 0.2,
-        weight: 2,
-      })
-      box.addTo(map)
-      drawingBoxRef.current = box
+    if (drawingBox) {
+      let bounds
+      if (drawingBox.bounds) {
+        // Handle bounds format
+        bounds = [
+          [drawingBox.bounds.south, drawingBox.bounds.west],
+          [drawingBox.bounds.north, drawingBox.bounds.east],
+        ]
+      } else if (drawingBox.nw && drawingBox.se) {
+        // Handle nw/se format
+        bounds = [
+          [drawingBox.nw.lat, drawingBox.nw.lng],
+          [drawingBox.se.lat, drawingBox.se.lng],
+        ]
+      }
+
+      if (bounds) {
+        const box = L.rectangle(bounds, {
+          color: "#ef4444",
+          fillColor: "#ef4444",
+          fillOpacity: drawingBox.isDrawing ? 0.1 : 0.2,
+          weight: 2,
+          dashArray: drawingBox.isDrawing ? "5, 5" : undefined, // Dotted line when drawing
+        })
+        box.addTo(map)
+        drawingBoxRef.current = box
+      }
     }
 
     if (drawingCircle && drawingCircle.center && drawingCircle.radius) {
@@ -207,8 +221,9 @@ export default function MapComponent({
         radius: drawingCircle.radius,
         color: "#ef4444",
         fillColor: "#ef4444",
-        fillOpacity: 0.2,
+        fillOpacity: drawingCircle.isDrawing ? 0.1 : 0.2,
         weight: 2,
+        dashArray: drawingCircle.isDrawing ? "5, 5" : undefined, // Dotted line when drawing
       })
       circle.addTo(map)
       drawingCircleRef.current = circle

@@ -1029,14 +1029,20 @@ export default function HoursPage() {
                           .map((hour) => (
                             <TableRow key={hour.id} className="border-white/10">
                               <TableCell className={getTextColor()}>{formatDate(hour.date)}</TableCell>
-                              <TableCell className={`text-white capitalize`}>{hour.type}</TableCell>
+                              <TableCell className={`capitalize ${getTextColor()}`}>{hour.type}</TableCell>
                               <TableCell className={getTextColor()}>{hour.hours}</TableCell>
                               <TableCell className={`max-w-[200px] truncate ${getSecondaryTextColor()}`}>
                                 {hour.description}
                               </TableCell>
                               <TableCell>
                                 <span
-                                  className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium border ${getStatusBadge(hour.status)}`}
+                                  className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium border ${
+                                    hour.status === "approved"
+                                      ? "bg-green-500/20 text-green-300 border-green-500/30"
+                                      : hour.status === "pending"
+                                        ? "bg-yellow-500/20 text-yellow-300 border-yellow-500/30"
+                                        : "bg-red-500/20 text-red-300 border-red-500/30"
+                                  }`}
                                 >
                                   {hour.status.charAt(0).toUpperCase() + hour.status.slice(1)}
                                 </span>
@@ -1477,7 +1483,7 @@ export default function HoursPage() {
                             .slice(0, 5)
                             .map((member, index) => (
                               <div key={member.id} className="flex justify-between items-center">
-                                <span className="text-sm text-slate-300">
+                                <span className={`text-sm ${getSecondaryTextColor()}`}>
                                   {index + 1}. {member.name}
                                 </span>
                                 <span className={`text-sm font-medium ${getTextColor()}`}>
@@ -1498,7 +1504,7 @@ export default function HoursPage() {
                             .slice(0, 5)
                             .map((member, index) => (
                               <div key={member.id} className="flex justify-between items-center">
-                                <span className="text-sm text-slate-300">
+                                <span className={`text-sm ${getSecondaryTextColor()}`}>
                                   {index + 1}. {member.name}
                                 </span>
                                 <span className={`text-sm font-medium ${getTextColor()}`}>
@@ -1519,7 +1525,7 @@ export default function HoursPage() {
                             .slice(0, 5)
                             .map((member, index) => (
                               <div key={member.id} className="flex justify-between items-center">
-                                <span className="text-sm text-slate-300">
+                                <span className={`text-sm ${getSecondaryTextColor()}`}>
                                   {index + 1}. {member.name}
                                 </span>
                                 <span className={`text-sm font-medium ${getTextColor()}`}>
@@ -1543,7 +1549,7 @@ export default function HoursPage() {
                             variant="outline"
                             size="sm"
                             onClick={() => (window.location.href = "/dashboard/hours/service-details")}
-                            className="glass-button-outline"
+                            className={`${getButtonClasses("outline")}`}
                           >
                             View Service Hours Details
                           </Button>
@@ -1551,7 +1557,7 @@ export default function HoursPage() {
                             variant="outline"
                             size="sm"
                             onClick={() => (window.location.href = "/dashboard/hours/chapter-details")}
-                            className="glass-button-outline"
+                            className={`${getButtonClasses("outline")}`}
                           >
                             View Chapter Hours Details
                           </Button>
@@ -1559,7 +1565,7 @@ export default function HoursPage() {
                             variant="outline"
                             size="sm"
                             onClick={() => (window.location.href = "/dashboard/hours/study-details")}
-                            className="glass-button-outline"
+                            className={`${getButtonClasses("outline")}`}
                           >
                             View Study Hours Details
                           </Button>
