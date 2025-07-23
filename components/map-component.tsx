@@ -40,6 +40,12 @@ export default function MapComponent({
       shadowUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png",
     })
 
+    // Clean up any existing map instance
+    if (leafletMapRef.current) {
+      leafletMapRef.current.remove()
+      leafletMapRef.current = null
+    }
+
     // Initialize map if it doesn't exist
     if (!leafletMapRef.current && containerRef.current) {
       // Default to NYC if no user location
@@ -102,22 +108,14 @@ export default function MapComponent({
       })
 
       // Add mouseup handler for ending drag operations
-      document.addEventListener("mouseup", () => {
+      leafletMapRef.current.on("mouseup", () => {
         if (isDragging) {
           setIsDragging(false)
           setDragStartPos(null)
-
           // Re-enable map dragging
-          if (leafletMapRef.current) {
-            leafletMapRef.current.dragging.enable()
-          }
+          leafletMapRef.current.dragging.enable()
         }
       })
-
-      // Expose the map reference if provided
-      if (mapRef) {
-        mapRef.current = leafletMapRef.current
-      }
 
       setMapLoaded(true)
     }

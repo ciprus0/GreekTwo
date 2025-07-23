@@ -76,15 +76,8 @@ export default function HoursPage() {
   const [orgStudySessions, setOrgStudySessions] = useState([]) // For admin view
   const [totalStudyHours, setTotalStudyHours] = useState(0)
 
-  const { getTextColor, getSecondaryTextColor, getMutedTextColor, getAccentTextColor } = useTextColors()
+  const { getTextColor, getSecondaryTextColor, getMutedTextColor } = useTextColors()
   const { theme } = useTheme()
-  const [isMounted, setIsMounted] = useState(false)
-
-  const checkIsAdmin = (user) => {
-    if (!user || !user.roles) return false
-    const adminRoles = ["Group Owner", "President", "Treasurer"]
-    return user.roles.some((role) => adminRoles.includes(role))
-  }
 
   // Get theme-aware card classes
   const getCardClasses = () => {
@@ -97,6 +90,52 @@ export default function HoursPage() {
       default:
         return "glass-card border-white/20"
     }
+  }
+
+  // Get theme-aware button classes
+  const getButtonClasses = (variant: "default" | "outline" | "destructive") => {
+    switch (theme) {
+      case "original":
+        switch (variant) {
+          case "default":
+            return "bg-red-700 hover:bg-red-800 text-white border-red-700"
+          case "outline":
+            return "border-red-700 text-red-700 hover:bg-red-700 hover:text-white bg-transparent"
+          case "destructive":
+            return "bg-red-600 hover:bg-red-700 text-white border-red-600"
+          default:
+            return "bg-red-700 hover:bg-red-800 text-white border-red-700"
+        }
+      case "light":
+        switch (variant) {
+          case "default":
+            return "bg-blue-600 hover:bg-blue-700 text-white border-blue-600"
+          case "outline":
+            return "border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white bg-transparent"
+          case "destructive":
+            return "light-glass-button-destructive"
+          default:
+            return "bg-blue-600 hover:bg-blue-700 text-white border-blue-600"
+        }
+      case "dark":
+      default:
+        switch (variant) {
+          case "default":
+            return "glass-button"
+          case "outline":
+            return "glass-button-outline bg-transparent"
+          case "destructive":
+            return "glass-button-destructive"
+          default:
+            return "glass-button"
+        }
+    }
+  }
+
+  const checkIsAdmin = (user) => {
+    if (!user || !user.roles) return false
+    const adminRoles = ["Group Owner", "President", "Treasurer"]
+    return user.roles.some((role) => adminRoles.includes(role))
   }
 
   useEffect(() => {
@@ -662,7 +701,7 @@ export default function HoursPage() {
           <div className="flex gap-2">
             <Dialog open={showAddHoursDialog} onOpenChange={setShowAddHoursDialog}>
               <DialogTrigger asChild>
-                <Button className="glass-button">
+                <Button className={`${getButtonClasses("default")}`}>
                   <Plus className="mr-2 h-4 w-4" />
                   Log Hours
                 </Button>
@@ -751,7 +790,7 @@ export default function HoursPage() {
             {checkIsAdmin(user) && (
               <Dialog open={showRequirementsDialog} onOpenChange={setShowRequirementsDialog}>
                 <DialogTrigger asChild>
-                  <Button variant="outline" className="glass-button-outline bg-transparent">
+                  <Button variant="outline" className={`${getButtonClasses("outline")}`}>
                     <Settings className="mr-2 h-4 w-4" />
                     Manage Requirements
                   </Button>

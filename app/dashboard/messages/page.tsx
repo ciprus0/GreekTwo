@@ -927,7 +927,7 @@ export default function MessagesPage() {
                           </div>
                           <p className={`text-sm ${getSecondaryTextColor()} truncate`}>
                             {lastMessage
-                              ? lastMessage.attachments.length > 0
+                              ? (lastMessage.attachments && lastMessage.attachments.length > 0)
                                 ? `${lastMessage.attachments.length} attachment${lastMessage.attachments.length > 1 ? "s" : ""}${lastMessage.text ? `: ${lastMessage.text}` : ""}`
                                 : lastMessage.text
                               : "No messages yet"}
@@ -1124,24 +1124,16 @@ export default function MessagesPage() {
                                               />
                                             </a>
                                           ) : (
-                                            <div className="flex items-center p-3 bg-slate-50">
-                                              <File className="h-5 w-5 mr-2 text-slate-500" />
-                                              <div className="flex-1 min-w-0">
-                                                <p className={`text-sm font-medium truncate ${getTextColor()}`}>
-                                                  {attachment.name}
-                                                </p>
-                                                <p className={`text-xs ${getMutedTextColor()}`}>
-                                                  {formatFileSize(attachment.size)}
-                                                </p>
-                                              </div>
-                                              <a
-                                                href={attachment.url}
-                                                download={attachment.name}
-                                                className="text-rose-700 text-xs hover:underline ml-2"
-                                              >
-                                                Download
-                                              </a>
-                                            </div>
+                                            <a
+                                              href={attachment.url}
+                                              target="_blank"
+                                              rel="noopener noreferrer"
+                                              className="flex items-center gap-2 p-3 hover:bg-slate-50"
+                                            >
+                                              <File className="h-4 w-4" />
+                                              <span className="text-sm">{attachment.name}</span>
+                                              <span className="text-xs text-slate-500">({formatFileSize(attachment.size)})</span>
+                                            </a>
                                           )}
                                         </div>
                                       ))}

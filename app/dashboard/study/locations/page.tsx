@@ -34,6 +34,7 @@ import dynamic from "next/dynamic"
 import { api } from "@/lib/supabase-api"
 import type { StudyLocation } from "@/types"
 import { ThemeWrapper, useTextColors } from "@/components/theme-wrapper"
+import { useTheme } from "@/lib/theme-context"
 
 const MapComponent = dynamic(() => import("@/components/map-component"), {
   ssr: false,
@@ -74,6 +75,60 @@ export default function StudyLocationsPage() {
   const [showEditDialog, setShowEditDialog] = useState(false)
 
   const { getTextColor, getSecondaryTextColor, getMutedTextColor } = useTextColors()
+  const { theme } = useTheme()
+
+  // Get theme-aware card classes
+  const getCardClasses = () => {
+    switch (theme) {
+      case "original":
+        return "original-card"
+      case "light":
+        return "light-glass-card"
+      case "dark":
+      default:
+        return "glass-card border-white/20"
+    }
+  }
+
+  // Get theme-aware button classes
+  const getButtonClasses = (variant: "default" | "outline" | "destructive") => {
+    switch (theme) {
+      case "original":
+        switch (variant) {
+          case "default":
+            return "bg-red-700 hover:bg-red-800 text-white border-red-700"
+          case "outline":
+            return "border-red-700 text-red-700 hover:bg-red-700 hover:text-white bg-transparent"
+          case "destructive":
+            return "bg-red-600 hover:bg-red-700 text-white border-red-600"
+          default:
+            return "bg-red-700 hover:bg-red-800 text-white border-red-700"
+        }
+      case "light":
+        switch (variant) {
+          case "default":
+            return "bg-blue-600 hover:bg-blue-700 text-white border-blue-600"
+          case "outline":
+            return "border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white bg-transparent"
+          case "destructive":
+            return "light-glass-button-destructive"
+          default:
+            return "bg-blue-600 hover:bg-blue-700 text-white border-blue-600"
+        }
+      case "dark":
+      default:
+        switch (variant) {
+          case "default":
+            return "glass-button"
+          case "outline":
+            return "glass-button-outline bg-transparent"
+          case "destructive":
+            return "glass-button-destructive"
+          default:
+            return "glass-button"
+        }
+    }
+  }
 
   // Effect to load user from localStorage
   useEffect(() => {
@@ -267,7 +322,7 @@ export default function StudyLocationsPage() {
     })
   }
 
-  const startResizing = () => {
+  const toggleResizeMode = () => {
     if (!drawingCircle && !drawingBox) {
       toast({
         title: "No Shape Selected",
@@ -276,7 +331,7 @@ export default function StudyLocationsPage() {
       })
       return
     }
-    setIsResizingShape(true)
+    setIsResizingShape(!isResizingShape)
     setClickMode(true)
     setIsMovingShape(false)
     if (drawingCircle) setDrawingCircle({ ...drawingCircle, isDrawing: true })
@@ -284,6 +339,24 @@ export default function StudyLocationsPage() {
     toast({
       title: "Resize Mode",
       description: "Move your mouse to resize the shape, then click to confirm.",
+    })
+  }
+
+  const toggleMoveMode = () => {
+    if (!drawingCircle && !drawingBox) {
+      toast({
+        title: "No Shape Selected",
+        description: "Please draw a shape first before moving.",
+        variant: "destructive",
+      })
+      return
+    }
+    setIsMovingShape(!isMovingShape)
+    setClickMode(true)
+    setIsResizingShape(false)
+    toast({
+      title: "Move Mode",
+      description: "Click on the map to move the shape to a new location.",
     })
   }
 
@@ -499,10 +572,10 @@ export default function StudyLocationsPage() {
                     Create New Study Location
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="bg-slate-800 border-slate-700 text-white sm:max-w-[900px] max-h-[90vh] overflow-y-auto shadow-2xl">
+                <DialogContent className={`${getCardClasses()} sm:max-w-[900px] max-h-[90vh] overflow-y-auto shadow-2xl`}>
                   <DialogHeader>
-                    <DialogTitle className="text-white">Create New Study Location</DialogTitle>
-                    <DialogDescription className="text-slate-300">
+                    <DialogTitle className={getTextColor()}>Create New Study Location</DialogTitle>
+                    <DialogDescription className={getSecondaryTextColor()}>
                       Draw a shape on the map and fill in the details to create a new study location.
                     </DialogDescription>
                   </DialogHeader>
@@ -515,7 +588,7 @@ export default function StudyLocationsPage() {
                         className={
                           drawingMode === "circle"
                             ? "bg-rose-700 hover:bg-rose-800 text-white"
-                            : "bg-transparent border-slate-600 text-white hover:bg-slate-700"
+                            : `${getButtonClasses("outline")}`
                         }
                       >
                         <Circle className="mr-2 h-4 w-4" /> Circle
@@ -527,7 +600,7 @@ export default function StudyLocationsPage() {
                         className={
                           drawingMode === "box"
                             ? "bg-rose-700 hover:bg-rose-800 text-white"
-                            : "bg-transparent border-slate-600 text-white hover:bg-slate-700"
+                            : `${getButtonClasses("outline")}`
                         }
                       >
                         <Square className="mr-2 h-4 w-4" /> Square
@@ -535,12 +608,11 @@ export default function StudyLocationsPage() {
                       <Button
                         variant={isResizingShape ? "default" : "outline"}
                         size="sm"
-                        onClick={startResizing}
-                        disabled={!drawingCircle && !drawingBox}
+                        onClick={toggleResizeMode}
                         className={
                           isResizingShape
                             ? "bg-rose-700 hover:bg-rose-800 text-white"
-                            : "bg-transparent border-slate-600 text-white hover:bg-slate-700 disabled:opacity-50"
+                            : `${getButtonClasses("outline")}`
                         }
                       >
                         <Resize className="mr-2 h-4 w-4" /> Resize
@@ -558,12 +630,11 @@ export default function StudyLocationsPage() {
                       <Button
                         variant={isMovingShape ? "default" : "outline"}
                         size="sm"
-                        onClick={startMoving}
-                        disabled={!drawingCircle && !drawingBox}
+                        onClick={toggleMoveMode}
                         className={
                           isMovingShape
                             ? "bg-rose-700 hover:bg-rose-800 text-white"
-                            : "bg-transparent border-slate-600 text-white hover:bg-slate-700 disabled:opacity-50"
+                            : `${getButtonClasses("outline")}`
                         }
                       >
                         <Move className="mr-2 h-4 w-4" /> Move
@@ -572,7 +643,7 @@ export default function StudyLocationsPage() {
                         variant="outline"
                         size="sm"
                         onClick={clearDrawing}
-                        className="bg-transparent border-slate-600 text-white hover:bg-slate-700"
+                        className={`${getButtonClasses("outline")}`}
                       >
                         <RotateCcw className="mr-2 h-4 w-4" /> Clear
                       </Button>
@@ -595,7 +666,7 @@ export default function StudyLocationsPage() {
                     {(drawingCircle || drawingBox) && (
                       <div className="grid gap-4">
                         <div className="grid gap-2">
-                          <Label htmlFor="location-name" className="text-white">
+                          <Label htmlFor="location-name" className={getTextColor()}>
                             Location Name
                           </Label>
                           <Input
@@ -604,14 +675,12 @@ export default function StudyLocationsPage() {
                             value={formData.name}
                             onChange={handleInputChange}
                             placeholder="e.g., University Library"
-                            className={`bg-slate-700 border-slate-600 text-white placeholder:text-slate-400 ${
-                              errors.name ? "border-red-500" : ""
-                            }`}
+                            className={`${getCardClasses()} ${errors.name ? "border-red-500" : ""}`}
                           />
                           {errors.name && <p className="text-sm text-red-400">{errors.name}</p>}
                         </div>
                         <div className="grid gap-2">
-                          <Label htmlFor="location-address" className="text-white">
+                          <Label htmlFor="location-address" className={getTextColor()}>
                             Address (Optional)
                           </Label>
                           <Input
@@ -620,11 +689,11 @@ export default function StudyLocationsPage() {
                             value={formData.address}
                             onChange={handleInputChange}
                             placeholder="e.g., 123 University Ave"
-                            className="bg-slate-700 border-slate-600 text-white placeholder:text-slate-400"
+                            className={getCardClasses()}
                           />
                         </div>
                         <div className="flex gap-2">
-                          <Button onClick={handleSaveLocation} className="bg-rose-700 hover:bg-rose-800 text-white">
+                          <Button onClick={handleSaveLocation} className={`${getButtonClasses("default")}`}>
                             Save Location
                           </Button>
                           <Button
@@ -633,7 +702,7 @@ export default function StudyLocationsPage() {
                               clearDrawing()
                               setShowCreateDialog(false)
                             }}
-                            className="bg-transparent border-slate-600 text-white hover:bg-slate-700"
+                            className={`${getButtonClasses("outline")}`}
                           >
                             Cancel
                           </Button>
