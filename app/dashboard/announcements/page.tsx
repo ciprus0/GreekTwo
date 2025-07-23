@@ -36,6 +36,8 @@ export default function AnnouncementsPage() {
   const [loading, setLoading] = useState(true)
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [isChannelDialogOpen, setIsChannelDialogOpen] = useState(false)
+  const [isManageChannelsDialogOpen, setIsManageChannelsDialogOpen] = useState(false)
+  const [editingChannel, setEditingChannel] = useState<AnnouncementChannel | null>(null)
   const [formData, setFormData] = useState({
     title: "",
     content: "",
@@ -221,6 +223,77 @@ export default function AnnouncementsPage() {
     }
   }
 
+  const handleEditChannel = (channel: AnnouncementChannel) => {
+    setEditingChannel(channel)
+    setChannelFormData({
+      name: channel.name,
+      description: channel.description,
+      color: channel.color,
+    })
+    setIsChannelDialogOpen(true)
+  }
+
+  const handleUpdateChannel = async () => {
+    if (!editingChannel || !channelFormData.name.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Please enter a channel name.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      const updatedChannel = await api.updateAnnouncementChannel(
+        user.organizationId,
+        editingChannel.id,
+        {
+          name: channelFormData.name,
+          description: channelFormData.description,
+          color: channelFormData.color,
+        }
+      )
+      
+      if (updatedChannel) {
+        setChannels((prev) => 
+          prev.map(ch => ch.id === editingChannel.id ? updatedChannel : ch)
+        )
+        setChannelFormData({ name: "", description: "", color: "#4F8EF7" })
+        setEditingChannel(null)
+        setIsChannelDialogOpen(false)
+        toast({
+          title: "Success",
+          description: "Channel updated successfully.",
+        })
+      }
+    } catch (error) {
+      console.error("Error updating channel:", error)
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update channel.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleDeleteChannel = async (channelId: string) => {
+    try {
+      await api.deleteAnnouncementChannel(user.organizationId, channelId)
+      setChannels((prev) => prev.filter(ch => ch.id !== channelId))
+      toast({
+        title: "Success",
+        description: "Channel deleted successfully.",
+      })
+    } catch (error) {
+      console.error("Error deleting channel:", error)
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete channel.",
+        variant: "destructive",
+      })
+    }
+  }
+
   const handleDeleteAnnouncement = async (id) => {
     try {
       await api.deleteAnnouncement(id)
@@ -291,7 +364,7 @@ export default function AnnouncementsPage() {
           </div>
           <div className="flex gap-2">
             <Button
-              onClick={() => setIsChannelDialogOpen(true)}
+              onClick={() => setIsManageChannelsDialogOpen(true)}
               variant="outline"
               size="sm"
               className="flex items-center gap-2"
@@ -541,13 +614,21 @@ export default function AnnouncementsPage() {
           </DialogContent>
         </Dialog>
 
-        {/* Create Channel Dialog */}
-        <Dialog open={isChannelDialogOpen} onOpenChange={setIsChannelDialogOpen}>
+        {/* Create/Edit Channel Dialog */}
+        <Dialog open={isChannelDialogOpen} onOpenChange={(open) => {
+          setIsChannelDialogOpen(open)
+          if (!open) {
+            setEditingChannel(null)
+            setChannelFormData({ name: "", description: "", color: "#4F8EF7" })
+          }
+        }}>
           <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle className={getTextColor()}>Create New Channel</DialogTitle>
+              <DialogTitle className={getTextColor()}>
+                {editingChannel ? "Edit Channel" : "Create New Channel"}
+              </DialogTitle>
               <DialogDescription className={getSecondaryTextColor()}>
-                Create a new channel for organizing announcements.
+                {editingChannel ? "Update channel details." : "Create a new channel for organizing announcements."}
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
@@ -602,13 +683,107 @@ export default function AnnouncementsPage() {
             <DialogFooter>
               <Button
                 variant="outline"
-                onClick={() => setIsChannelDialogOpen(false)}
+                onClick={() => {
+                  setIsChannelDialogOpen(false)
+                  setEditingChannel(null)
+                  setChannelFormData({ name: "", description: "", color: "#4F8EF7" })
+                }}
                 className={getButtonClasses("outline")}
               >
                 Cancel
               </Button>
-              <Button onClick={handleCreateChannel} className={getButtonClasses("default")}>
-                Create Channel
+              <Button 
+                onClick={editingChannel ? handleUpdateChannel : handleCreateChannel} 
+                className={getButtonClasses("default")}
+              >
+                {editingChannel ? "Update Channel" : "Create Channel"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Manage Channels Dialog */}
+        <Dialog open={isManageChannelsDialogOpen} onOpenChange={setIsManageChannelsDialogOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle className={getTextColor()}>Manage Channels</DialogTitle>
+              <DialogDescription className={getSecondaryTextColor()}>
+                View, edit, and delete announcement channels.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <h3 className={`font-medium ${getTextColor()}`}>Current Channels</h3>
+                <Button
+                  onClick={() => {
+                    setIsManageChannelsDialogOpen(false)
+                    setIsChannelDialogOpen(true)
+                  }}
+                  size="sm"
+                  className="flex items-center gap-2"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add Channel
+                </Button>
+              </div>
+              
+              <div className="space-y-2 max-h-96 overflow-y-auto">
+                {channels.map((channel) => (
+                  <div
+                    key={channel.id}
+                    className="flex items-center justify-between p-3 border rounded-lg"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div 
+                        className="w-4 h-4 rounded-full" 
+                        style={{ backgroundColor: channel.color }}
+                      ></div>
+                      <div>
+                        <h4 className={`font-medium ${getTextColor()}`}>#{channel.name}</h4>
+                        <p className={`text-sm ${getSecondaryTextColor()}`}>
+                          {channel.description || "No description"}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setIsManageChannelsDialogOpen(false)
+                          handleEditChannel(channel)
+                        }}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDeleteChannel(channel.id)}
+                        className="text-red-600 hover:text-red-700"
+                      >
+                        <Trash className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+                
+                {channels.length === 0 && (
+                  <div className="text-center py-8">
+                    <p className={`text-sm ${getSecondaryTextColor()}`}>
+                      No channels created yet. Create your first channel to get started.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setIsManageChannelsDialogOpen(false)}
+                className={getButtonClasses("outline")}
+              >
+                Close
               </Button>
             </DialogFooter>
           </DialogContent>

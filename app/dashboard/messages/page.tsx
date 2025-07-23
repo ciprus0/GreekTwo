@@ -1087,7 +1087,7 @@ export default function MessagesPage() {
                     <h2 className={`font-semibold ${getTextColor()}`}>
                       {activeChatType === "group"
                         ? activeConversation?.groupChat?.name || activeConversation?.name || "Group Chat"
-                        : activeConversation?.name || "Unknown User"}
+                        : getActiveConversationMember()?.name || "Unknown User"}
                     </h2>
                     <p className={`text-sm ${getSecondaryTextColor()}`}>
                       {activeChatType === "group"

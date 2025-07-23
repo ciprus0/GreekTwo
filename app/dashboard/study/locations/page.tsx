@@ -578,8 +578,8 @@ export default function StudyLocationsPage() {
                       />
                     </div>
                     
-                    {/* Show form once a shape is drawn */}
-                    {(drawingCircle || drawingBox) && (
+                    {/* Show form once a shape is drawn - always show if shape exists */}
+                    {(drawingCircle || drawingBox) ? (
                       <div className="grid gap-4">
                         <div className="grid gap-2">
                           <Label htmlFor="location-name">
@@ -622,10 +622,7 @@ export default function StudyLocationsPage() {
                           </Button>
                         </div>
                       </div>
-                    )}
-                    
-                    {/* Show instructions when no shape is drawn */}
-                    {!drawingCircle && !drawingBox && (
+                    ) : (
                       <div className="text-center py-8">
                         <p className="text-sm text-gray-500">
                           Click on the map to start drawing a location, or use the drawing tools above.

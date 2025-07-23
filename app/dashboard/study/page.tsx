@@ -1480,7 +1480,6 @@ export default function StudyPage() {
                   value={newRequirement.name}
                   onChange={(e) => setNewRequirement({ ...newRequirement, name: e.target.value })}
                   placeholder="e.g., Freshman Study Hours"
-                  className="glass-input"
                 />
               </div>
               <div className="grid gap-2">
@@ -1492,7 +1491,6 @@ export default function StudyPage() {
                   value={newRequirement.description}
                   onChange={(e) => setNewRequirement({ ...newRequirement, description: e.target.value })}
                   placeholder="e.g., Study hours for first-year members"
-                  className="glass-input"
                 />
               </div>
               <div className="grid gap-2">
@@ -1506,7 +1504,6 @@ export default function StudyPage() {
                   max="1000"
                   value={newRequirement.hoursRequired}
                   onChange={(e) => setNewRequirement({ ...newRequirement, hoursRequired: e.target.value })}
-                  className="glass-input"
                 />
               </div>
               <div className="gri gap-2">
