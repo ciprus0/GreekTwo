@@ -21,6 +21,7 @@ import {
   ImageIcon,
   MapPin,
   Bell,
+  Divide,
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -1613,8 +1614,7 @@ export default function EventsPage() {
                     {upcomingEvents.length === 0 ? (
                       <div className={`text-center py-8 ${getMutedTextColor()}`}>No upcoming events found.</div>
                     ) : (
-                      <>
-                        {upcomingEvents.map((event) => (
+                      upcomingEvents.map((event) => (
                         <div
                           key={`${event.id}-${event.start_time}`}
                           className={`flex items-start gap-4 p-4 border rounded-lg cursor-pointer transition-colors ${
@@ -2550,5 +2550,7 @@ export default function EventsPage() {
         </DialogContent>
       </Dialog>
     </div>
+
+    
   )
 }
