@@ -1789,19 +1789,21 @@ export default function GymPage() {
         </div>
 
         {/* Map View */}
-        <Card className={getCardClasses()}>
-          <CardHeader>
-            <CardTitle className={getTextColor()}>Map View</CardTitle>
-            <CardDescription className={getSecondaryTextColor()}>
-              Visual representation of all gym locations and your current location.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[400px] rounded-lg overflow-hidden border border-slate-600">
-              <MapComponent userLocation={userLocation} studyLocations={gymLocations} useAppleMaps={false} />
-            </div>
-          </CardContent>
-        </Card>
+        <div className={`${getCardClasses()} overflow-hidden`}>
+          <div className="p-6 border-b">
+            <h2 className={`text-xl font-semibold ${getTextColor()}`}>Map View</h2>
+            <p className={`text-sm ${getSecondaryTextColor()}`}>Visual representation of all gym locations and your current location.</p>
+          </div>
+          <div className="h-[500px]">
+            {!showCreateDialog && (
+              <MapComponent
+                userLocation={userLocation}
+                studyLocations={gymLocations}
+                mapRef={mapRef}
+              />
+            )}
+          </div>
+        </div>
 
         {!isAdmin && (
           <Card className={getCardClasses()}>

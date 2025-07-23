@@ -779,11 +779,13 @@ export default function StudyLocationsPage() {
                 <p className={`text-sm ${getSecondaryTextColor()}`}>Visual representation of all study locations and your current location.</p>
               </div>
               <div className="h-[500px]">
-                <MapComponent
-                  userLocation={userLocation}
-                  studyLocations={studyLocations}
-                  mapRef={mapRef}
-                />
+                {!showCreateDialog && (
+                  <MapComponent
+                    userLocation={userLocation}
+                    studyLocations={studyLocations}
+                    mapRef={mapRef}
+                  />
+                )}
               </div>
             </div>
           </div>

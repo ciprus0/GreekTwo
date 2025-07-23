@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -23,6 +23,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { api } from "@/lib/supabase-api"
 import { ThemeWrapper, useTextColors } from "@/components/theme-wrapper"
 import { useTheme } from "@/lib/theme-context"
+import { useRouter } from "next/navigation"
 
 export default function HoursPage() {
   const { toast } = useToast()
@@ -78,6 +79,8 @@ export default function HoursPage() {
 
   const { getTextColor, getSecondaryTextColor, getMutedTextColor } = useTextColors()
   const { theme } = useTheme()
+  const router = useRouter()
+  const mountedRef = useRef(true)
 
   // Get theme-aware card classes
   const getCardClasses = () => {
@@ -139,7 +142,6 @@ export default function HoursPage() {
   }
 
   useEffect(() => {
-    setIsMounted(true)
     const loadData = async () => {
       try {
         // Load user data
@@ -153,6 +155,7 @@ export default function HoursPage() {
           if (parsedUser.organizationId) {
             // Load organization data
             const org = await api.getOrganizationById(parsedUser.organizationId)
+            if (!mountedRef.current) return
             setOrganization(org)
 
             // Load hour requirements from organization
@@ -182,11 +185,12 @@ export default function HoursPage() {
 
             // Load hours data
             const userHours = await api.getHoursByUser(parsedUser.id, parsedUser.organizationId)
+            if (!mountedRef.current) return
             setHours(userHours)
 
             // Load study sessions to calculate weekly study hours
             const userSessions = await api.getStudySessionsByUser(parsedUser.id, parsedUser.organizationId)
-            if (!isMounted) return
+            if (!mountedRef.current) return
 
             // Calculate weekly study hours (current week only)
             const now = new Date()
@@ -216,44 +220,33 @@ export default function HoursPage() {
               .filter((h) => h.type === "chapter" && h.status === "approved")
               .reduce((total, h) => total + h.hours, 0)
 
-            const manualStudyHoursTotal = userHours
+            const studyTotal = userHours
               .filter((h) => h.type === "study" && h.status === "approved")
               .reduce((total, h) => total + h.hours, 0)
 
-            const completedCurrentUserSessions = await api.getStudySessionsByUser(
-              parsedUser.id,
-              parsedUser.organizationId,
-            )
-
-            const sessionBasedStudySeconds = completedCurrentUserSessions.reduce(
-              (total, session) => total + (session.duration || 0),
-              0,
-            )
-            const sessionBasedStudyHours = sessionBasedStudySeconds / 3600
-
-            const totalUserStudyHours = manualStudyHoursTotal + sessionBasedStudyHours
-            setStudyHours(totalUserStudyHours)
-
+            if (!mountedRef.current) return
             setServiceHours(serviceTotal)
             setChapterHours(chapterTotal)
+            setStudyHours(studyTotal)
 
+            // Load pending hours for admin
             if (checkIsAdmin(parsedUser)) {
-              // Load all hours for the organization
               const allHours = await api.getHoursByOrganization(parsedUser.organizationId)
-              setAllMemberHours(allHours)
+              if (!mountedRef.current) return
               setPendingHours(allHours.filter((h) => h.status === "pending"))
+              setAllMemberHours(allHours)
 
-              // Load all members
+              // Load all members for admin view
               const members = await api.getMembersByOrganization(parsedUser.organizationId)
+              if (!mountedRef.current) return
               const approvedMembers = members.filter((m) => m.approved)
               setAllMembers(approvedMembers)
 
-              const fetchedOrgStudySessions = await api.getStudySessionsByOrganization(parsedUser.organizationId)
-              const completedOrgSessions = fetchedOrgStudySessions.filter((s) => s.endTime && s.duration)
+              // Load all study sessions for the organization
+              const orgSessions = await api.getStudySessionsByOrganization(parsedUser.organizationId)
+              if (!mountedRef.current) return
+              const completedOrgSessions = orgSessions.filter((s) => s.end_time && s.duration)
               setOrgStudySessions(completedOrgSessions)
-
-              console.log("Loaded members:", approvedMembers.length)
-              console.log("Loaded hours:", allHours.length)
 
               // Calculate member hours summary with correct weekly study hours calculation
               const summary = approvedMembers.map((member) => {
@@ -302,25 +295,37 @@ export default function HoursPage() {
                   totalHours: serviceHours + chapterHours + studyHours,
                 }
               })
+              if (!mountedRef.current) return
               setMemberHoursSummary(summary)
-              console.log("Member hours summary:", summary)
             }
           }
+        } else {
+          // Redirect to login if no user
+          router.push("/login")
         }
-        setLoading(false)
       } catch (error) {
-        console.error("Error loading data:", error)
-        toast({
-          title: "Error",
-          description: "Failed to load data. Please try again.",
-          variant: "destructive",
-        })
-        setLoading(false)
+        console.error("Error loading hours data:", error)
+        if (mountedRef.current) {
+          toast({
+            title: "Error",
+            description: "Failed to load hours data. Please try again.",
+            variant: "destructive",
+          })
+        }
+      } finally {
+        if (mountedRef.current) {
+          setLoading(false)
+        }
       }
     }
 
     loadData()
-  }, [toast, isMounted])
+
+    // Cleanup function
+    return () => {
+      mountedRef.current = false
+    }
+  }, [toast, router])
 
   const handleInputChange = (e) => {
     const { name, value } = e.target

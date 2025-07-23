@@ -1136,11 +1136,11 @@ export default function MessagesPage() {
                         return (
                           <div
                             key={msg.id}
-                            className={`group hover:bg-slate-50/50 px-2 py-1 rounded ${msg.showSenderInfo ? "mt-4" : "mt-0.5"} ${isCurrentUser ? "ml-auto max-w-[85%] lg:max-w-[70%]" : "mr-auto max-w-[85%] lg:max-w-[70%]"}`}
+                            className={`group hover:bg-slate-50/50 px-2 py-1 rounded ${msg.showSenderInfo ? "mt-4" : "mt-0.5"}`}
                             onMouseEnter={() => setHoveredMessage(msg.id)}
                             onMouseLeave={() => setHoveredMessage(null)}
                           >
-                            <div className={`flex gap-3 ${isCurrentUser ? "flex-row-reverse" : ""}`}>
+                            <div className="flex gap-3">
                               {/* Avatar - only show for first message in group */}
                               <div className="w-8 lg:w-10 flex-shrink-0">
                                 {msg.showSenderInfo && (
@@ -1166,7 +1166,7 @@ export default function MessagesPage() {
                               <div className="flex-1 min-w-0">
                                 {/* Username and timestamp - only show for first message in group */}
                                 {msg.showSenderInfo && (
-                                  <div className={`flex items-baseline gap-2 mb-1 ${isCurrentUser ? "justify-end" : ""}`}>
+                                  <div className="flex items-baseline gap-2 mb-1">
                                     <span className={`font-medium text-sm ${getTextColor()}`}>
                                       {senderMember?.name || "Unknown User"}
                                     </span>
@@ -1177,7 +1177,7 @@ export default function MessagesPage() {
                                 )}
 
                                 {/* Message content */}
-                                <div className={`space-y-1 ${isCurrentUser ? "text-right" : ""}`}>
+                                <div className="space-y-1">
                                   {msg.text && (
                                     <p className={`text-sm ${getTextColor()} whitespace-pre-wrap leading-relaxed ${isCurrentUser ? "bg-red-500 text-white rounded-lg px-3 py-2" : "bg-slate-100 rounded-lg px-3 py-2"}`}>
                                       {msg.text}

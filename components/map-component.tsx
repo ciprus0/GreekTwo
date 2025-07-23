@@ -109,36 +109,40 @@ export default function MapComponent({
             iconAnchor: [6, 6],
           }),
         })
+        
+        // Add popup with location name
+        marker.bindPopup(`<b>${location.name || "Study Location"}</b><br>${location.address || ""}`)
         marker.addTo(map)
         locationMarkersRef.current.push(marker)
 
         // Add shape if exists
-        if (location.shape) {
-          let shape
-          if (location.shape.type === "circle") {
-            shape = L.circle([location.lat, location.lng], {
-              radius: location.shape.radius,
-              color: "#ef4444",
-              fillColor: "#ef4444",
-              fillOpacity: 0.1,
-              weight: 2,
-            })
-          } else if (location.shape.type === "rectangle") {
-            const bounds = [
-              [location.shape.bounds.south, location.shape.bounds.west],
-              [location.shape.bounds.north, location.shape.bounds.east],
-            ]
-            shape = L.rectangle(bounds, {
-              color: "#ef4444",
-              fillColor: "#ef4444",
-              fillOpacity: 0.1,
-              weight: 2,
-            })
-          }
-          if (shape) {
-            shape.addTo(map)
-            locationCirclesRef.current.push(shape)
-          }
+        if (location.is_box && location.box_coordinates) {
+          // Handle box coordinates
+          const bounds = [
+            [location.box_coordinates.nw.lat, location.box_coordinates.nw.lng],
+            [location.box_coordinates.se.lat, location.box_coordinates.se.lng],
+          ]
+          const rectangle = L.rectangle(bounds, {
+            color: "#ef4444",
+            fillColor: "#ef4444",
+            fillOpacity: 0.1,
+            weight: 2,
+          })
+          rectangle.bindPopup(`<b>${location.name || "Study Zone"}</b><br>${location.address || ""}`)
+          rectangle.addTo(map)
+          locationBoxesRef.current.push(rectangle)
+        } else if (location.radius && location.radius > 0) {
+          // Handle circle coordinates
+          const circle = L.circle([location.lat, location.lng], {
+            radius: location.radius,
+            color: "#ef4444",
+            fillColor: "#ef4444",
+            fillOpacity: 0.1,
+            weight: 2,
+          })
+          circle.bindPopup(`<b>${location.name || "Study Zone"}</b><br>${location.address || ""}<br>Radius: ${location.radius}m`)
+          circle.addTo(map)
+          locationCirclesRef.current.push(circle)
         }
       }
     })
