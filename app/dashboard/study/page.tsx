@@ -1463,7 +1463,7 @@ export default function StudyPage() {
         </Tabs>
 
         <Dialog open={showCreateRequirementDialog} onOpenChange={setShowCreateRequirementDialog}>
-          <DialogContent className="max-w-md glass-dialog border-white/20">
+          <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle className={getTextColor()}>Create Study Hour Requirement</DialogTitle>
               <DialogDescription className={getSecondaryTextColor()}>

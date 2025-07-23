@@ -623,6 +623,15 @@ export default function StudyLocationsPage() {
                         </div>
                       </div>
                     )}
+                    
+                    {/* Show instructions when no shape is drawn */}
+                    {!drawingCircle && !drawingBox && (
+                      <div className="text-center py-8">
+                        <p className="text-sm text-gray-500">
+                          Click on the map to start drawing a location, or use the drawing tools above.
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </DialogContent>
               </Dialog>

@@ -5,7 +5,7 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Bell, Plus, Search, Filter, MoreVertical, Trash, Edit } from "lucide-react"
+import { Bell, Plus, Search, Filter, MoreVertical, Trash, Edit, Hash, Settings } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { useToast } from "@/components/ui/use-toast"
 import {
@@ -19,23 +19,32 @@ import {
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Textarea } from "@/components/ui/textarea"
 import { api } from "@/lib/supabase-api"
 import { CustomAvatar } from "@/components/ui/custom-avatar"
 import { ThemeWrapper, useTextColors } from "@/components/theme-wrapper"
 import { useTheme } from "@/lib/theme-context"
+import { AnnouncementChannel } from "@/lib/supabase-api"
 
 export default function AnnouncementsPage() {
   const { toast } = useToast()
   const [user, setUser] = useState(null)
   const [announcements, setAnnouncements] = useState([])
+  const [channels, setChannels] = useState<AnnouncementChannel[]>([])
+  const [selectedChannel, setSelectedChannel] = useState("all")
   const [searchTerm, setSearchTerm] = useState("")
-  const [categoryFilter, setCategoryFilter] = useState("all")
   const [loading, setLoading] = useState(true)
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
+  const [isChannelDialogOpen, setIsChannelDialogOpen] = useState(false)
   const [formData, setFormData] = useState({
     title: "",
     content: "",
-    category: "general",
+    channel: "general",
+  })
+  const [channelFormData, setChannelFormData] = useState({
+    name: "",
+    description: "",
+    color: "#4F8EF7",
   })
 
   const { getTextColor, getSecondaryTextColor, getMutedTextColor, getAccentTextColor } = useTextColors()
@@ -51,6 +60,19 @@ export default function AnnouncementsPage() {
       case "dark":
       default:
         return "glass-card border-white/20"
+    }
+  }
+
+  // Get theme-aware button classes
+  const getButtonClasses = (variant: "default" | "outline" | "ghost" | "link") => {
+    switch (theme) {
+      case "original":
+        return variant === "default" ? "original-button" : "original-button-outline"
+      case "light":
+        return variant === "default" ? "light-glass-button" : "light-glass-button-outline"
+      case "dark":
+      default:
+        return variant === "default" ? "glass-button" : "glass-button-outline"
     }
   }
 
@@ -83,10 +105,14 @@ export default function AnnouncementsPage() {
 
           setUser(parsedUser)
 
-          // Load announcements from Supabase
+          // Load announcements and channels from Supabase
           if (parsedUser.organizationId) {
-            const announcementsData = await api.getAnnouncementsByOrganization(parsedUser.organizationId)
+            const [announcementsData, channelsData] = await Promise.all([
+              api.getAnnouncementsByOrganization(parsedUser.organizationId),
+              api.getAnnouncementChannels(parsedUser.organizationId)
+            ])
             setAnnouncements(announcementsData)
+            setChannels(channelsData)
           }
         }
       } catch (error) {
@@ -104,75 +130,28 @@ export default function AnnouncementsPage() {
     loadData()
   }, [toast])
 
-  useEffect(() => {
-    let interval
-    if (user && user.organizationId) {
-      const refreshUserData = async () => {
-        try {
-          const members = await api.getMembersByOrganization(user.organizationId)
-          const freshUserData = members.find((member) => member.email === user.email)
-          if (freshUserData && freshUserData.profile_picture !== user.profile_picture) {
-            const updatedUser = {
-              ...user,
-              profile_picture: freshUserData.profile_picture,
-              name: freshUserData.name,
-            }
-            setUser(updatedUser)
-            localStorage.setItem("user", JSON.stringify(updatedUser))
-          }
-        } catch (error) {
-          console.error("Error refreshing user data:", error)
-        }
-      }
-      interval = setInterval(refreshUserData, 5000) // Refresh every 5 seconds
-    }
-    return () => {
-      if (interval) clearInterval(interval)
-    }
-  }, [user])
-
-  useEffect(() => {
-    const handleProfilePictureUpdate = (event) => {
-      if (event.detail.userId === user?.id) {
-        setUser((prev) => ({
-          ...prev,
-          profile_picture: event.detail.profilePicture,
-        }))
-      }
-    }
-    window.addEventListener("profilePictureUpdated", handleProfilePictureUpdate)
-    return () => {
-      window.removeEventListener("profilePictureUpdated", handleProfilePictureUpdate)
-    }
-  }, [user?.id])
-
   const handleSearch = (e) => {
     setSearchTerm(e.target.value)
   }
 
-  const handleCategoryFilter = (value) => {
-    setCategoryFilter(value)
-  }
-
   const handleInputChange = (e) => {
     const { name, value } = e.target
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }))
+    setFormData((prev) => ({ ...prev, [name]: value }))
+  }
+
+  const handleChannelInputChange = (e) => {
+    const { name, value } = e.target
+    setChannelFormData((prev) => ({ ...prev, [name]: value }))
   }
 
   const handleSelectChange = (name, value) => {
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }))
+    setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
   const handleCreateAnnouncement = async () => {
     if (!formData.title.trim() || !formData.content.trim()) {
       toast({
-        title: "Error",
+        title: "Validation Error",
         description: "Please fill in all required fields.",
         variant: "destructive",
       })
@@ -180,43 +159,24 @@ export default function AnnouncementsPage() {
     }
 
     try {
-      // Get fresh user data like members section does
-      let currentUser = user
-      if (user.organizationId && user.email) {
-        const members = await api.getMembersByOrganization(user.organizationId)
-        const freshUserData = members.find((member) => member.email === user.email)
-        if (freshUserData) {
-          currentUser = {
-            ...user,
-            profile_picture: freshUserData.profile_picture,
-            name: freshUserData.name,
-          }
-        }
-      }
-
-      const newAnnouncement = await api.createAnnouncement({
+      const announcementData = {
         title: formData.title,
         content: formData.content,
-        category: formData.category,
-        author_id: currentUser.id,
-        author_name: currentUser.name,
-        author_profile_picture: currentUser.profile_picture,
-        organization_id: currentUser.organizationId,
-      })
+        category: formData.channel, // Keep for backward compatibility
+        channel: formData.channel,
+        author_id: user.id,
+        author_name: user.name,
+        author_profile_picture: user.profile_picture,
+        organization_id: user.organizationId,
+      }
 
-      setAnnouncements([newAnnouncement, ...announcements])
-
-      setFormData({
-        title: "",
-        content: "",
-        category: "general",
-      })
-
-      setIsDialogOpen(false)
-
+      const newAnnouncement = await api.createAnnouncement(announcementData)
+      setAnnouncements((prev) => [newAnnouncement, ...prev])
+      setFormData({ title: "", content: "", channel: "general" })
+      setIsCreateDialogOpen(false)
       toast({
-        title: "Announcement created",
-        description: "Your announcement has been published successfully.",
+        title: "Success",
+        description: "Announcement created successfully.",
       })
     } catch (error) {
       console.error("Error creating announcement:", error)
@@ -228,15 +188,46 @@ export default function AnnouncementsPage() {
     }
   }
 
+  const handleCreateChannel = async () => {
+    if (!channelFormData.name.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Please enter a channel name.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      const newChannel = await api.createAnnouncementChannel(user.organizationId, {
+        name: channelFormData.name,
+        description: channelFormData.description,
+        color: channelFormData.color,
+      })
+      setChannels((prev) => [...prev, newChannel])
+      setChannelFormData({ name: "", description: "", color: "#4F8EF7" })
+      setIsChannelDialogOpen(false)
+      toast({
+        title: "Success",
+        description: "Channel created successfully.",
+      })
+    } catch (error) {
+      console.error("Error creating channel:", error)
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create channel.",
+        variant: "destructive",
+      })
+    }
+  }
+
   const handleDeleteAnnouncement = async (id) => {
     try {
       await api.deleteAnnouncement(id)
-      const updatedAnnouncements = announcements.filter((announcement) => announcement.id !== id)
-      setAnnouncements(updatedAnnouncements)
-
+      setAnnouncements((prev) => prev.filter((announcement) => announcement.id !== id))
       toast({
-        title: "Announcement deleted",
-        description: "The announcement has been deleted successfully.",
+        title: "Success",
+        description: "Announcement deleted successfully.",
       })
     } catch (error) {
       console.error("Error deleting announcement:", error)
@@ -248,219 +239,380 @@ export default function AnnouncementsPage() {
     }
   }
 
-  // Filter announcements based on search and category filter
-  const filteredAnnouncements = announcements.filter((announcement) => {
-    const matchesSearch =
-      announcement.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      announcement.content.toLowerCase().includes(searchTerm.toLowerCase())
-
-    const matchesCategory = categoryFilter === "all" || announcement.category === categoryFilter
-
-    return matchesSearch && matchesCategory
-  })
-
   const formatDate = (timestamp) => {
     const date = new Date(timestamp)
-    return date.toLocaleDateString(undefined, {
-      year: "numeric",
-      month: "long",
+    return date.toLocaleDateString("en-US", {
+      month: "numeric",
       day: "numeric",
+      year: "numeric",
     })
   }
 
-  const isAdmin = user?.roles && user.roles.some((role) => ["Group Owner", "President", "Treasurer"].includes(role))
+  const getChannelColor = (channelId) => {
+    const channel = channels.find(ch => ch.id === channelId)
+    return channel?.color || "#4F8EF7"
+  }
+
+  const getChannelName = (channelId) => {
+    const channel = channels.find(ch => ch.id === channelId)
+    return channel?.name || channelId
+  }
+
+  const filteredAnnouncements = announcements.filter((announcement) => {
+    const matchesSearch = announcement.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         announcement.content.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesChannel = selectedChannel === "all" || announcement.channel === selectedChannel || announcement.category === selectedChannel
+    return matchesSearch && matchesChannel
+  })
+
+  const selectedChannelData = channels.find(ch => ch.id === selectedChannel)
 
   if (loading) {
-    return <div className="flex items-center justify-center h-[calc(100vh-200px)]">Loading...</div>
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-500 mx-auto"></div>
+          <p className="mt-2 text-sm text-gray-500">Loading announcements...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
     <ThemeWrapper>
-      <div className="space-y-6 p-4 md:p-6">
-        <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
+      <div className="container mx-auto p-4 space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
           <div>
-            <h1 className={`text-2xl font-bold tracking-tight ${getTextColor()}`}>Announcements</h1>
-            <p className={`text-muted-foreground ${getMutedTextColor()}`}>
-              Stay updated with the latest chapter announcements.
+            <h1 className={`text-3xl font-bold ${getTextColor()}`}>Announcements</h1>
+            <p className={`text-sm ${getSecondaryTextColor()}`}>
+              {filteredAnnouncements.length} announcement{filteredAnnouncements.length !== 1 ? "s" : ""}
             </p>
           </div>
-          {isAdmin && (
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-              <DialogTrigger asChild>
-                <Button className="glass-button">
-                  <Plus className="mr-2 h-4 w-4" />
-                  New Announcement
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="glass-dialog">
-                <DialogHeader>
-                  <DialogTitle>Create Announcement</DialogTitle>
-                  <DialogDescription>Create a new announcement for your chapter members.</DialogDescription>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="title">Title</Label>
-                    <Input
-                      id="title"
-                      name="title"
-                      value={formData.title}
-                      onChange={handleInputChange}
-                      placeholder="Announcement title"
-                      className="glass-input"
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="category">Category</Label>
-                    <Select value={formData.category} onValueChange={(value) => handleSelectChange("category", value)}>
-                      <SelectTrigger id="category">
-                        <SelectValue placeholder="Select category" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="general">General</SelectItem>
-                        <SelectItem value="event">Event</SelectItem>
-                        <SelectItem value="important">Important</SelectItem>
-                        <SelectItem value="reminder">Reminder</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="content">Content</Label>
-                    <textarea
-                      id="content"
-                      name="content"
-                      rows={5}
-                      className="glass-input min-h-[120px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                      value={formData.content}
-                      onChange={handleInputChange}
-                      placeholder="Write your announcement here..."
-                    />
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setIsDialogOpen(false)} className="glass-button-outline">
-                    Cancel
-                  </Button>
-                  <Button className="glass-button" onClick={handleCreateAnnouncement}>
-                    Publish
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          )}
-          {!isAdmin && (
-            <div className="text-center py-4">
-              <p className={`text-sm ${getMutedTextColor()}`}>Only administrators can create announcements.</p>
-            </div>
-          )}
-        </div>
-
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-500" />
-            <Input
-              type="search"
-              placeholder="Search announcements..."
-              className="glass-input pl-8"
-              value={searchTerm}
-              onChange={handleSearch}
-            />
+          <div className="flex gap-2">
+            <Button
+              onClick={() => setIsChannelDialogOpen(true)}
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2"
+            >
+              <Settings className="h-4 w-4" />
+              Manage Channels
+            </Button>
+            <Button
+              onClick={() => setIsCreateDialogOpen(true)}
+              className="flex items-center gap-2"
+            >
+              <Plus className="h-4 w-4" />
+              New Announcement
+            </Button>
           </div>
-          <Select defaultValue="all" onValueChange={handleCategoryFilter}>
-            <SelectTrigger className="w-full sm:w-[180px]">
-              <div className="flex items-center">
-                <Filter className="mr-2 h-4 w-4" />
-                <span>Filter by category</span>
-              </div>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Categories</SelectItem>
-              <SelectItem value="general">General</SelectItem>
-              <SelectItem value="event">Event</SelectItem>
-              <SelectItem value="important">Important</SelectItem>
-              <SelectItem value="reminder">Reminder</SelectItem>
-            </SelectContent>
-          </Select>
         </div>
 
-        <div className="space-y-4">
-          {filteredAnnouncements.length === 0 ? (
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          {/* Channels Sidebar */}
+          <div className="lg:col-span-1">
             <Card className={getCardClasses()}>
-              <CardContent className="flex items-center justify-center h-40">
-                <p className={`${getMutedTextColor()}`}>No announcements found.</p>
+              <CardHeader>
+                <CardTitle className={`text-sm font-semibold uppercase tracking-wide ${getMutedTextColor()}`}>
+                  Channels
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="space-y-1">
+                  {/* All Channel */}
+                  <button
+                    onClick={() => setSelectedChannel("all")}
+                    className={`w-full flex items-center gap-3 px-3 py-2 text-left rounded-md transition-colors ${
+                      selectedChannel === "all"
+                        ? "bg-red-500/20 text-red-600 dark:text-red-400"
+                        : `hover:bg-slate-100 dark:hover:bg-slate-700 ${getTextColor()}`
+                    }`}
+                  >
+                    <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                    <span className="font-medium"># All</span>
+                  </button>
+
+                  {/* Individual Channels */}
+                  {channels.map((channel) => (
+                    <button
+                      key={channel.id}
+                      onClick={() => setSelectedChannel(channel.id)}
+                      className={`w-full flex items-center gap-3 px-3 py-2 text-left rounded-md transition-colors ${
+                        selectedChannel === channel.id
+                          ? "bg-red-500/20 text-red-600 dark:text-red-400"
+                          : `hover:bg-slate-100 dark:hover:bg-slate-700 ${getTextColor()}`
+                      }`}
+                    >
+                      <div 
+                        className="w-2 h-2 rounded-full" 
+                        style={{ backgroundColor: channel.color }}
+                      ></div>
+                      <span className="font-medium"># {channel.name}</span>
+                    </button>
+                  ))}
+                </div>
               </CardContent>
             </Card>
-          ) : (
-            filteredAnnouncements.map((announcement) => (
-              <Card key={announcement.id} className={getCardClasses()}>
-                <CardHeader className="pb-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <CustomAvatar
-                        src={announcement.author_profile_picture}
-                        name={announcement.author_name}
-                        size="md"
-                      />
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <p className={`font-medium ${getTextColor()}`}>{announcement.author_name}</p>
-                          <Badge
-                            className={`${
-                              announcement.category === "important"
-                                ? "bg-red-600"
-                                : announcement.category === "event"
-                                  ? "bg-green-600"
-                                  : announcement.category === "reminder"
-                                    ? "bg-yellow-600"
-                                    : "bg-blue-600"
-                            }`}
-                          >
-                            {announcement.category.charAt(0).toUpperCase() + announcement.category.slice(1)}
-                          </Badge>
+          </div>
+
+          {/* Main Content */}
+          <div className="lg:col-span-3">
+            {/* Search Bar */}
+            <div className="mb-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder="Search announcements..."
+                  value={searchTerm}
+                  onChange={handleSearch}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+
+            {/* Channel Header */}
+            {selectedChannel !== "all" && selectedChannelData && (
+              <div className="mb-4 p-4 rounded-lg bg-slate-50 dark:bg-slate-800">
+                <div className="flex items-center gap-3">
+                  <div 
+                    className="w-3 h-3 rounded-full" 
+                    style={{ backgroundColor: selectedChannelData.color }}
+                  ></div>
+                  <div>
+                    <h2 className={`font-semibold ${getTextColor()}`}>#{selectedChannelData.name}</h2>
+                    <p className={`text-sm ${getSecondaryTextColor()}`}>{selectedChannelData.description}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Announcements List */}
+            <div className="space-y-4">
+              {filteredAnnouncements.length === 0 ? (
+                <Card className={getCardClasses()}>
+                  <CardContent className="p-8 text-center">
+                    <Bell className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                    <h3 className={`text-lg font-medium ${getTextColor()}`}>No announcements found</h3>
+                    <p className={`text-sm ${getSecondaryTextColor()} mt-1`}>
+                      {searchTerm || selectedChannel !== "all" 
+                        ? "Try adjusting your search or channel filter."
+                        : "Create the first announcement for your organization."
+                      }
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : (
+                filteredAnnouncements.map((announcement) => (
+                  <Card key={announcement.id} className={getCardClasses()}>
+                    <CardContent className="p-6">
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                          <CustomAvatar
+                            src={announcement.author_profile_picture}
+                            alt={announcement.author_name}
+                            fallback={announcement.author_name}
+                            className="h-10 w-10"
+                          />
+                          <div className="flex items-center gap-2">
+                            <Badge 
+                              variant="secondary"
+                              style={{ backgroundColor: getChannelColor(announcement.channel || announcement.category) + "20", color: getChannelColor(announcement.channel || announcement.category) }}
+                            >
+                              {getChannelName(announcement.channel || announcement.category)}
+                            </Badge>
+                          </div>
                         </div>
-                        <p className={`text-xs ${getMutedTextColor()}`}>{formatDate(announcement.created_at)}</p>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={() => handleDeleteAnnouncement(announcement.id)}
+                              className="text-red-600"
+                            >
+                              <Trash className="mr-2 h-4 w-4" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
-                    </div>
-                    {(isAdmin || announcement.author_id === user.id) && (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem>
-                            <Edit className="mr-2 h-4 w-4" />
-                            <span>Edit</span>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            className="text-red-600"
-                            onClick={() => handleDeleteAnnouncement(announcement.id)}
-                          >
-                            <Trash className="mr-2 h-4 w-4" />
-                            <span>Delete</span>
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )}
-                  </div>
-                  <CardTitle className={`mt-2 ${getTextColor()}`}>{announcement.title}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className={`whitespace-pre-line ${getSecondaryTextColor()}`}>{announcement.content}</p>
-                </CardContent>
-                <CardFooter className="border-t pt-4 flex justify-between">
-                  <div className={`flex items-center gap-2 text-sm ${getMutedTextColor()}`}>
-                    <Bell className="h-4 w-4" />
-                    <span>Notify all members</span>
-                  </div>
-                  <Button variant="outline" size="sm">
-                    Share
-                  </Button>
-                </CardFooter>
-              </Card>
-            ))
-          )}
+
+                      <div className="space-y-2">
+                        <h3 className={`text-lg font-semibold ${getTextColor()}`}>
+                          {announcement.title}
+                        </h3>
+                        <p className={`text-sm ${getSecondaryTextColor()} whitespace-pre-wrap`}>
+                          {announcement.content}
+                        </p>
+                      </div>
+
+                      <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+                        <p className={`text-xs ${getMutedTextColor()}`}>
+                          {formatDate(announcement.created_at)} • {announcement.author_name}
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              )}
+            </div>
+          </div>
         </div>
+
+        {/* Create Announcement Dialog */}
+        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle className={getTextColor()}>Create New Announcement</DialogTitle>
+              <DialogDescription className={getSecondaryTextColor()}>
+                Share important information with your organization.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="title" className={getTextColor()}>
+                  Title
+                </Label>
+                <Input
+                  id="title"
+                  name="title"
+                  value={formData.title}
+                  onChange={handleInputChange}
+                  placeholder="Enter announcement title"
+                  className="glass-input"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="channel" className={getTextColor()}>
+                  Channel
+                </Label>
+                <Select
+                  value={formData.channel}
+                  onValueChange={(value) => handleSelectChange("channel", value)}
+                >
+                  <SelectTrigger className="glass-input">
+                    <SelectValue placeholder="Select a channel" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {channels.map((channel) => (
+                      <SelectItem key={channel.id} value={channel.id}>
+                        <div className="flex items-center gap-2">
+                          <div 
+                            className="w-3 h-3 rounded-full" 
+                            style={{ backgroundColor: channel.color }}
+                          ></div>
+                          {channel.name}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="content" className={getTextColor()}>
+                  Content
+                </Label>
+                <Textarea
+                  id="content"
+                  name="content"
+                  value={formData.content}
+                  onChange={handleInputChange}
+                  placeholder="Enter announcement content"
+                  className="glass-input min-h-[120px]"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setIsCreateDialogOpen(false)}
+                className={getButtonClasses("outline")}
+              >
+                Cancel
+              </Button>
+              <Button onClick={handleCreateAnnouncement} className={getButtonClasses("default")}>
+                Create Announcement
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Create Channel Dialog */}
+        <Dialog open={isChannelDialogOpen} onOpenChange={setIsChannelDialogOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className={getTextColor()}>Create New Channel</DialogTitle>
+              <DialogDescription className={getSecondaryTextColor()}>
+                Create a new channel for organizing announcements.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="channel-name" className={getTextColor()}>
+                  Channel Name
+                </Label>
+                <Input
+                  id="channel-name"
+                  name="name"
+                  value={channelFormData.name}
+                  onChange={handleChannelInputChange}
+                  placeholder="e.g., Events, Important"
+                  className="glass-input"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="channel-description" className={getTextColor()}>
+                  Description (Optional)
+                </Label>
+                <Input
+                  id="channel-description"
+                  name="description"
+                  value={channelFormData.description}
+                  onChange={handleChannelInputChange}
+                  placeholder="Brief description of the channel"
+                  className="glass-input"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="channel-color" className={getTextColor()}>
+                  Color
+                </Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="channel-color"
+                    name="color"
+                    type="color"
+                    value={channelFormData.color}
+                    onChange={handleChannelInputChange}
+                    className="w-16 h-10 p-1"
+                  />
+                  <Input
+                    value={channelFormData.color}
+                    onChange={(e) => setChannelFormData(prev => ({ ...prev, color: e.target.value }))}
+                    placeholder="#4F8EF7"
+                    className="flex-1"
+                  />
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setIsChannelDialogOpen(false)}
+                className={getButtonClasses("outline")}
+              >
+                Cancel
+              </Button>
+              <Button onClick={handleCreateChannel} className={getButtonClasses("default")}>
+                Create Channel
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </ThemeWrapper>
   )
