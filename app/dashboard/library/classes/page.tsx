@@ -9,6 +9,7 @@ import { FileUploadDialog } from "../file-upload-dialog"
 import { BookOpen, Search, X, ChevronLeft, Plus, Loader2 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { ThemeWrapper, useTextColors } from "@/components/theme-wrapper"
+import { useTheme } from "@/lib/theme-context"
 
 interface ClassData {
   class_name: string

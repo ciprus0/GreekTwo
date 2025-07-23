@@ -527,8 +527,11 @@ export default function EventsPage() {
         return updatedEvents.sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
       })
       
-      // Also reload data to ensure everything is in sync
-      await loadEventsData()
+      // Force re-render by updating the events state
+      setEvents((prev) => {
+        const updatedEvents = [...prev, newEvent]
+        return updatedEvents.sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
+      })
     } catch (error) {
       console.error("Error creating event:", error)
       toast({
@@ -825,10 +828,14 @@ export default function EventsPage() {
   const sevenDaysFromNow = new Date(today)
   sevenDaysFromNow.setDate(today.getDate() + 7)
 
-  const upcomingEvents = sortedEvents.filter((event) => {
+  const allUpcomingEvents = sortedEvents.filter((event) => {
     const eventDate = new Date(event.start_time)
     return eventDate >= today && eventDate <= sevenDaysFromNow
   })
+  
+  const upcomingEvents = allUpcomingEvents.slice(0, 3)
+  const hasMoreUpcoming = allUpcomingEvents.length > 3
+  
   const pastEvents = sortedEvents.filter((event) => new Date(event.start_time) < today)
 
   const formatDate = (dateString) => {
@@ -1606,7 +1613,8 @@ export default function EventsPage() {
                     {upcomingEvents.length === 0 ? (
                       <div className={`text-center py-8 ${getMutedTextColor()}`}>No upcoming events found.</div>
                     ) : (
-                      upcomingEvents.map((event) => (
+                      <>
+                        {upcomingEvents.map((event) => (
                         <div
                           key={`${event.id}-${event.start_time}`}
                           className={`flex items-start gap-4 p-4 border rounded-lg cursor-pointer transition-colors ${

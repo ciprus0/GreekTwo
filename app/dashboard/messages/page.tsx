@@ -1366,10 +1366,10 @@ export default function MessagesPage() {
 
         {/* Group Members Dialog */}
         <Dialog open={showGroupMembersDialog} onOpenChange={setShowGroupMembersDialog}>
-          <DialogContent className="bg-slate-800 border-slate-700 text-white max-w-md shadow-2xl">
+          <DialogContent className={`${getCardClasses()} max-w-md shadow-2xl`}>
             <DialogHeader>
-              <DialogTitle className="text-white">Group Members</DialogTitle>
-              <DialogDescription className="text-slate-300">
+              <DialogTitle className={getTextColor()}>Group Members</DialogTitle>
+              <DialogDescription className={getSecondaryTextColor()}>
                 {activeConversation?.groupChat?.name || "Group Chat"} • {groupMembers.length} members
               </DialogDescription>
             </DialogHeader>
@@ -1383,7 +1383,7 @@ export default function MessagesPage() {
                     user?.id === activeConversation?.groupChat?.created_by && !isCurrentUser && !isCreator
 
                   return (
-                    <div key={member.id} className="flex items-center gap-3 p-2 rounded-lg bg-slate-700/50">
+                    <div key={member.id} className={`flex items-center gap-3 p-2 rounded-lg ${theme === "original" ? "bg-gray-100" : theme === "light" ? "bg-blue-50/50" : "bg-slate-700/50"}`}>
                       <div className="relative">
                         <Avatar>
                           <NextImage
@@ -1404,7 +1404,7 @@ export default function MessagesPage() {
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
-                          <p className="font-medium text-white">{member.name}</p>
+                          <p className={`font-medium ${getTextColor()}`}>{member.name}</p>
                           {isCreator && (
                             <Badge variant="outline" className="text-xs border-amber-500 text-amber-400">
                               Creator
@@ -1437,7 +1437,7 @@ export default function MessagesPage() {
             <DialogFooter>
               <Button
                 onClick={() => setShowGroupMembersDialog(false)}
-                className="bg-slate-700 hover:bg-slate-600 text-white"
+                className={getButtonClasses("default")}
               >
                 Close
               </Button>

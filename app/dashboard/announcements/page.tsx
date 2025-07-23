@@ -80,6 +80,19 @@ export default function AnnouncementsPage() {
     }
   }
 
+  // Get theme-aware input classes
+  const getInputClasses = () => {
+    switch (theme) {
+      case "original":
+        return "original-input"
+      case "light":
+        return "light-glass-input"
+      case "dark":
+      default:
+        return "glass-input"
+    }
+  }
+
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -458,7 +471,7 @@ export default function AnnouncementsPage() {
               onClick={() => setIsManageChannelsDialogOpen(true)}
               variant="outline"
               size="sm"
-              className="flex items-center gap-2"
+              className={`flex items-center gap-2 ${getButtonClasses("outline")}`}
             >
               <Settings className="h-4 w-4" />
               Manage Channels
@@ -524,15 +537,15 @@ export default function AnnouncementsPage() {
           <div className="lg:col-span-3">
             {/* Search Bar */}
             <div className="mb-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder="Search announcements..."
-                  value={searchTerm}
-                  onChange={handleSearch}
-                  className="pl-10"
-                />
-              </div>
+                          <div className="relative">
+              <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 ${getMutedTextColor()}`} />
+              <Input
+                placeholder="Search announcements..."
+                value={searchTerm}
+                onChange={handleSearch}
+                className={`pl-10 ${getInputClasses()}`}
+              />
+            </div>
             </div>
 
             {/* Channel Header */}
@@ -658,7 +671,7 @@ export default function AnnouncementsPage() {
                   value={formData.title}
                   onChange={handleInputChange}
                   placeholder="Enter announcement title"
-                  className="glass-input"
+                  className={`${getInputClasses()}`}
                 />
               </div>
               <div className="grid gap-2">
@@ -697,7 +710,7 @@ export default function AnnouncementsPage() {
                   value={formData.content}
                   onChange={handleInputChange}
                   placeholder="Enter announcement content"
-                  className="glass-input min-h-[120px]"
+                  className={`${getInputClasses()} min-h-[120px]`}
                 />
               </div>
             </div>
@@ -830,7 +843,7 @@ export default function AnnouncementsPage() {
                   value={formData.title}
                   onChange={handleInputChange}
                   placeholder="Enter announcement title"
-                  className="glass-input"
+                  className={`${getInputClasses()}`}
                 />
               </div>
               <div className="grid gap-2">
@@ -869,7 +882,7 @@ export default function AnnouncementsPage() {
                   value={formData.content}
                   onChange={handleInputChange}
                   placeholder="Enter announcement content"
-                  className="glass-input min-h-[120px]"
+                  className={`${getInputClasses()} min-h-[120px]`}
                 />
               </div>
             </div>
