@@ -6,7 +6,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Search, Send, Paperclip, MoreVertical, ImageIcon, File, X, Plus, Users } from "lucide-react"
+import { Search, Send, Paperclip, MoreVertical, ImageIcon, File, X, Plus, Users, ArrowLeft } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
@@ -19,8 +19,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { ScrollArea } from "@/components/ui/scroll-area"
 import NextImage from "next/image"
 import { ThemeWrapper, useTextColors } from "@/components/theme-wrapper"
-import { useDebounce, useCleanup } from "@/lib/performance-utils"
 import { useTheme } from "@/lib/theme-context"
+import { compressImage } from "@/lib/file-storage"
 
 // Emoji picker data
 const EMOJI_CATEGORIES = [
@@ -152,6 +152,72 @@ export default function MessagesPage() {
     if ((!message.trim() && attachments.length === 0) || !activeChat || !user) return
 
     try {
+      // Upload attachments to Supabase storage first
+      const uploadedAttachments = []
+      
+      for (const attachment of attachments) {
+        try {
+          // Convert blob URL back to file
+          const response = await fetch(attachment.url)
+          const blob = await response.blob()
+          const file = new File([blob], attachment.name, { type: attachment.type })
+          
+          // Compress image if it's an image
+          let processedFile = file
+          if (attachment.type.startsWith('image/')) {
+            try {
+              const compressedBlob = await compressImage(blob, {
+                quality: 0.8,
+                maxWidth: 1920,
+                maxHeight: 1920,
+                format: 'jpeg'
+              })
+              processedFile = new File([compressedBlob], attachment.name, { type: 'image/jpeg' })
+            } catch (compressionError) {
+              console.warn('Image compression failed, using original:', compressionError)
+            }
+          }
+          
+          // Generate unique file path
+          const timestamp = Date.now()
+          const sanitizedFileName = attachment.name.replace(/[^a-zA-Z0-9.-]/g, "_")
+          const filePath = `${user.organizationId}/${timestamp}-${sanitizedFileName}`
+          
+          // Upload to Supabase storage
+          const formData = new FormData()
+          formData.append('file', processedFile)
+          formData.append('bucketName', 'convo-images')
+          formData.append('filePath', filePath)
+          formData.append('userId', user.id)
+          
+          const uploadResponse = await fetch('/api/storage/upload', {
+            method: 'POST',
+            body: formData
+          })
+          
+          if (!uploadResponse.ok) {
+            throw new Error('Failed to upload attachment')
+          }
+          
+          const { publicUrl } = await uploadResponse.json()
+          
+          uploadedAttachments.push({
+            id: attachment.id,
+            name: attachment.name,
+            type: attachment.type,
+            size: attachment.size,
+            url: publicUrl
+          })
+        } catch (uploadError) {
+          console.error('Failed to upload attachment:', uploadError)
+          toast({
+            title: "Upload Error",
+            description: `Failed to upload ${attachment.name}`,
+            variant: "destructive"
+          })
+        }
+      }
+
       let messageData
 
       if (activeChatType === "group") {
@@ -162,7 +228,7 @@ export default function MessagesPage() {
           recipient_id: null, // Group messages don't have a specific recipient
           group_chat_id: groupChatId,
           text: message,
-          attachments: [...attachments],
+          attachments: uploadedAttachments,
           reactions: {},
           organization_id: user.organizationId,
         }
@@ -173,7 +239,7 @@ export default function MessagesPage() {
           recipient_id: activeChat, // This is already the recipient's ID
           group_chat_id: null,
           text: message,
-          attachments: [...attachments],
+          attachments: uploadedAttachments,
           reactions: {},
           organization_id: user.organizationId,
         }
@@ -215,13 +281,11 @@ export default function MessagesPage() {
       }
     } catch (error) {
       console.error("Error sending message:", error)
-      if (mountedRef.current) {
-        toast({
-          title: "Error",
-          description: "Failed to send message. Please try again.",
-          variant: "destructive",
-        })
-      }
+      toast({
+        title: "Error",
+        description: "Failed to send message. Please try again.",
+        variant: "destructive",
+      })
     }
   }, [message, attachments, activeChat, activeChatType, user, chats, loadAllConversations, toast])
 
@@ -843,8 +907,9 @@ export default function MessagesPage() {
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-220px)]">
-            <div className={`lg:col-span-1 ${getCardClasses()} overflow-hidden`}>
+          <div className="flex flex-col lg:grid lg:grid-cols-3 gap-6 h-[calc(100vh-220px)]">
+            {/* Conversations List - Hidden on mobile when chat is active */}
+            <div className={`${activeChat ? 'hidden lg:block' : 'block'} lg:col-span-1 ${getCardClasses()} overflow-hidden`}>
               <div className="p-4 border-b flex items-center justify-between">
                 <div className="relative flex-1 mr-2">
                   <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-500" />
@@ -927,7 +992,7 @@ export default function MessagesPage() {
                           </div>
                           <p className={`text-sm ${getSecondaryTextColor()} truncate`}>
                             {lastMessage
-                              ? (lastMessage.attachments && lastMessage.attachments.length > 0)
+                              ? (lastMessage.attachments && Array.isArray(lastMessage.attachments) && lastMessage.attachments.length > 0)
                                 ? `${lastMessage.attachments.length} attachment${lastMessage.attachments.length > 1 ? "s" : ""}${lastMessage.text ? `: ${lastMessage.text}` : ""}`
                                 : lastMessage.text
                               : "No messages yet"}
@@ -941,22 +1006,29 @@ export default function MessagesPage() {
               </div>
             </div>
 
-            <div className={`lg:col-span-2 ${getCardClasses()} overflow-hidden flex flex-col`}>
+            {/* Chat Area */}
+            <div className={`${activeChat ? 'block' : 'hidden lg:block'} lg:col-span-2 ${getCardClasses()} flex flex-col`}>
               {activeChat ? (
                 <>
+                  {/* Chat Header */}
                   <div className="p-4 border-b flex items-center justify-between">
-                    <div
-                      className="flex items-center gap-3 cursor-pointer"
-                      onClick={() => {
-                        if (activeChatType === "group") {
-                          setShowGroupMembersDialog(true)
-                        }
-                      }}
-                    >
+                    <div className="flex items-center gap-3">
+                      {/* Back button for mobile */}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="lg:hidden"
+                        onClick={() => setActiveChat(null)}
+                      >
+                        <ArrowLeft className="h-5 w-5" />
+                      </Button>
+                      
                       {activeChatType === "group" ? (
-                        <div className="w-10 h-10 bg-slate-200 rounded-full flex items-center justify-center">
-                          <Users className="h-5 w-5 text-slate-600" />
-                        </div>
+                        <Avatar>
+                          <div className="w-10 h-10 bg-slate-200 rounded-full flex items-center justify-center">
+                            <Users className="h-5 w-5 text-slate-600" />
+                          </div>
+                        </Avatar>
                       ) : (
                         <Avatar>
                           {getActiveConversationMember() ? (
@@ -994,7 +1066,7 @@ export default function MessagesPage() {
                             : getActiveConversationMember()?.name || "Unknown User"}
                           {activeChatType === "group" && <Users className="h-3 w-3 text-slate-500 ml-1" />}
                         </p>
-                        {activeChatType === "direct" && (
+                        {activeChatType !== "group" && (
                           <p className="text-xs text-green-600">
                             {onlineUsers.includes(activeChat) ? "Online" : "Offline"}
                           </p>
@@ -1063,15 +1135,15 @@ export default function MessagesPage() {
                         return (
                           <div
                             key={msg.id}
-                            className={`group hover:bg-slate-50/50 px-2 py-1 rounded ${msg.showSenderInfo ? "mt-4" : "mt-0.5"}`}
+                            className={`group hover:bg-slate-50/50 px-2 py-1 rounded ${msg.showSenderInfo ? "mt-4" : "mt-0.5"} ${isCurrentUser ? "ml-auto max-w-[85%] lg:max-w-[70%]" : "mr-auto max-w-[85%] lg:max-w-[70%]"}`}
                             onMouseEnter={() => setHoveredMessage(msg.id)}
                             onMouseLeave={() => setHoveredMessage(null)}
                           >
-                            <div className="flex gap-3">
+                            <div className={`flex gap-3 ${isCurrentUser ? "flex-row-reverse" : ""}`}>
                               {/* Avatar - only show for first message in group */}
-                              <div className="w-10 flex-shrink-0">
+                              <div className="w-8 lg:w-10 flex-shrink-0">
                                 {msg.showSenderInfo && (
-                                  <Avatar className="w-10 h-10">
+                                  <Avatar className="w-8 h-8 lg:w-10 lg:h-10">
                                     <NextImage
                                       src={senderMember?.profile_picture || "/placeholder.svg?height=40&width=40"}
                                       alt={senderMember?.name || ""}
@@ -1093,7 +1165,7 @@ export default function MessagesPage() {
                               <div className="flex-1 min-w-0">
                                 {/* Username and timestamp - only show for first message in group */}
                                 {msg.showSenderInfo && (
-                                  <div className="flex items-baseline gap-2 mb-1">
+                                  <div className={`flex items-baseline gap-2 mb-1 ${isCurrentUser ? "justify-end" : ""}`}>
                                     <span className={`font-medium text-sm ${getTextColor()}`}>
                                       {senderMember?.name || "Unknown User"}
                                     </span>
@@ -1104,17 +1176,17 @@ export default function MessagesPage() {
                                 )}
 
                                 {/* Message content */}
-                                <div className="space-y-1">
+                                <div className={`space-y-1 ${isCurrentUser ? "text-right" : ""}`}>
                                   {msg.text && (
-                                    <p className={`text-sm ${getTextColor()} whitespace-pre-wrap leading-relaxed`}>
+                                    <p className={`text-sm ${getTextColor()} whitespace-pre-wrap leading-relaxed ${isCurrentUser ? "bg-red-500 text-white rounded-lg px-3 py-2" : "bg-slate-100 rounded-lg px-3 py-2"}`}>
                                       {msg.text}
                                     </p>
                                   )}
 
-                                  {msg.attachments && msg.attachments.length > 0 && (
+                                  {msg.attachments && Array.isArray(msg.attachments) && msg.attachments.length > 0 && (
                                     <div className="space-y-2">
                                       {msg.attachments.map((attachment) => (
-                                        <div key={attachment.id} className="rounded border overflow-hidden max-w-md">
+                                        <div key={attachment.id} className="rounded border overflow-hidden max-w-full">
                                           {attachment.type === "image" ? (
                                             <a href={attachment.url} target="_blank" rel="noopener noreferrer">
                                               <img
@@ -1264,9 +1336,8 @@ export default function MessagesPage() {
                   </div>
 
                   <div className="p-4 border-t">
-                    {/* Attachment preview */}
-                    {attachments.length > 0 && (
-                      <div className="flex flex-wrap gap-2 mb-2">
+                    {attachments && Array.isArray(attachments) && attachments.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mb-3">
                         {attachments.map((attachment) => (
                           <div key={attachment.id} className="relative group">
                             <div className="border rounded p-1 bg-slate-50">
@@ -1295,23 +1366,31 @@ export default function MessagesPage() {
                       </div>
                     )}
 
-                    <div className="flex items-center gap-2">
-                      <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileChange} multiple />
-                      <Button variant="ghost" size="icon" onClick={() => fileInputRef.current?.click()}>
-                        <Paperclip className="h-5 w-5" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => {
-                          if (fileInputRef.current) {
-                            fileInputRef.current.accept = "image/*"
-                            fileInputRef.current.click()
-                          }
-                        }}
-                      >
-                        <ImageIcon className="h-5 w-5" />
-                      </Button>
+                    <div className="flex items-end gap-2">
+                      <div className="flex items-center gap-1">
+                        <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileChange} multiple />
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={() => fileInputRef.current?.click()}
+                          className="p-2"
+                        >
+                          <Paperclip className="h-5 w-5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            if (fileInputRef.current) {
+                              fileInputRef.current.accept = "image/*"
+                              fileInputRef.current.click()
+                            }
+                          }}
+                          className="p-2"
+                        >
+                          <ImageIcon className="h-5 w-5" />
+                        </Button>
+                      </div>
                       <div className="relative flex-1">
                         <textarea
                           placeholder="Type a message..."
@@ -1323,7 +1402,7 @@ export default function MessagesPage() {
                       </div>
                       <Button
                         size="icon"
-                        className="glass-button"
+                        className="glass-button p-2"
                         onClick={handleSendMessage}
                         disabled={!message.trim() && attachments.length === 0}
                       >
