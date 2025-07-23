@@ -505,10 +505,10 @@ export default function StudyLocationsPage() {
                     Create New Study Location
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="bg-slate-800 border-slate-700 text-white sm:max-w-[900px] max-h-[90vh] overflow-y-auto shadow-2xl">
+                <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto shadow-2xl">
                   <DialogHeader>
-                    <DialogTitle className="text-white">Create New Study Location</DialogTitle>
-                    <DialogDescription className="text-slate-300">
+                    <DialogTitle>Create New Study Location</DialogTitle>
+                    <DialogDescription>
                       Draw a shape on the map and fill in the details to create a new study location.
                     </DialogDescription>
                   </DialogHeader>
@@ -518,11 +518,6 @@ export default function StudyLocationsPage() {
                         variant={drawingMode === "circle" ? "default" : "outline"}
                         size="sm"
                         onClick={startDrawingCircle}
-                        className={
-                          drawingMode === "circle"
-                            ? "bg-rose-700 hover:bg-rose-800 text-white"
-                            : "bg-transparent border-slate-600 text-white hover:bg-slate-700"
-                        }
                       >
                         <Circle className="mr-2 h-4 w-4" /> Circle
                       </Button>
@@ -530,11 +525,6 @@ export default function StudyLocationsPage() {
                         variant={drawingMode === "box" ? "default" : "outline"}
                         size="sm"
                         onClick={startDrawingBox}
-                        className={
-                          drawingMode === "box"
-                            ? "bg-rose-700 hover:bg-rose-800 text-white"
-                            : "bg-transparent border-slate-600 text-white hover:bg-slate-700"
-                        }
                       >
                         <Square className="mr-2 h-4 w-4" /> Square
                       </Button>
@@ -543,11 +533,6 @@ export default function StudyLocationsPage() {
                         size="sm"
                         onClick={startResizing}
                         disabled={!drawingCircle && !drawingBox}
-                        className={
-                          isResizingShape
-                            ? "bg-rose-700 hover:bg-rose-800 text-white"
-                            : "bg-transparent border-slate-600 text-white hover:bg-slate-700 disabled:opacity-50"
-                        }
                       >
                         <Resize className="mr-2 h-4 w-4" /> Resize
                       </Button>
@@ -566,11 +551,6 @@ export default function StudyLocationsPage() {
                         size="sm"
                         onClick={startMoving}
                         disabled={!drawingCircle && !drawingBox}
-                        className={
-                          isMovingShape
-                            ? "bg-rose-700 hover:bg-rose-800 text-white"
-                            : "bg-transparent border-slate-600 text-white hover:bg-slate-700 disabled:opacity-50"
-                        }
                       >
                         <Move className="mr-2 h-4 w-4" /> Move
                       </Button>
@@ -578,12 +558,11 @@ export default function StudyLocationsPage() {
                         variant="outline"
                         size="sm"
                         onClick={clearDrawing}
-                        className="bg-transparent border-slate-600 text-white hover:bg-slate-700"
                       >
                         <RotateCcw className="mr-2 h-4 w-4" /> Clear
                       </Button>
                     </div>
-                    <div className="h-[400px] rounded-lg overflow-hidden border border-slate-600">
+                    <div className="h-[400px] rounded-lg overflow-hidden border">
                       <MapComponent
                         userLocation={userLocation}
                         studyLocations={studyLocations}
@@ -601,7 +580,7 @@ export default function StudyLocationsPage() {
                     {(drawingCircle || drawingBox) && (
                       <div className="grid gap-4">
                         <div className="grid gap-2">
-                          <Label htmlFor="location-name" className="text-white">
+                          <Label htmlFor="location-name">
                             Location Name
                           </Label>
                           <Input
@@ -610,14 +589,12 @@ export default function StudyLocationsPage() {
                             value={formData.name}
                             onChange={handleInputChange}
                             placeholder="e.g., University Library"
-                            className={`bg-slate-700 border-slate-600 text-white placeholder:text-slate-400 ${
-                              errors.name ? "border-red-500" : ""
-                            }`}
+                            className={errors.name ? "border-red-500" : ""}
                           />
                           {errors.name && <p className="text-sm text-red-400">{errors.name}</p>}
                         </div>
                         <div className="grid gap-2">
-                          <Label htmlFor="location-address" className="text-white">
+                          <Label htmlFor="location-address">
                             Address (Optional)
                           </Label>
                           <Input
@@ -626,11 +603,10 @@ export default function StudyLocationsPage() {
                             value={formData.address}
                             onChange={handleInputChange}
                             placeholder="e.g., 123 University Ave"
-                            className="bg-slate-700 border-slate-600 text-white placeholder:text-slate-400"
                           />
                         </div>
                         <div className="flex gap-2">
-                          <Button onClick={handleSaveLocation} className="bg-rose-700 hover:bg-rose-800 text-white">
+                          <Button onClick={handleSaveLocation}>
                             Save Location
                           </Button>
                           <Button
@@ -639,7 +615,6 @@ export default function StudyLocationsPage() {
                               clearDrawing()
                               setShowCreateDialog(false)
                             }}
-                            className="bg-transparent border-slate-600 text-white hover:bg-slate-700"
                           >
                             Cancel
                           </Button>
@@ -653,10 +628,10 @@ export default function StudyLocationsPage() {
           </div>
         </div>
 
-        <Card className="bg-slate-800/90 border-slate-700/50 text-white">
+        <Card>
           <CardHeader>
-            <CardTitle className="text-white">Study Locations</CardTitle>
-            <CardDescription className="text-slate-300">
+            <CardTitle>Study Locations</CardTitle>
+            <CardDescription>
               {isAdmin
                 ? "Manage locations where members can track study hours."
                 : "View locations where you can track study hours."}
@@ -665,38 +640,38 @@ export default function StudyLocationsPage() {
           <CardContent>
             <Table>
               <TableHeader>
-                <TableRow className="border-slate-700">
-                  <TableHead className="text-slate-300">Location Name</TableHead>
-                  <TableHead className="text-slate-300">Address</TableHead>
-                  <TableHead className="text-slate-300">Type</TableHead>
-                  <TableHead className="text-slate-300">Created</TableHead>
-                  {isAdmin && <TableHead className="text-right text-slate-300">Actions</TableHead>}
+                <TableRow>
+                  <TableHead>Location Name</TableHead>
+                  <TableHead>Address</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Created</TableHead>
+                  {isAdmin && <TableHead className="text-right">Actions</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {studyLocations.length === 0 ? (
-                  <TableRow className="border-slate-700">
-                    <TableCell colSpan={isAdmin ? 5 : 4} className="text-center py-8 text-slate-400">
+                  <TableRow>
+                    <TableCell colSpan={isAdmin ? 5 : 4} className="text-center py-8">
                       No study locations have been added yet for this organization.
                     </TableCell>
                   </TableRow>
                 ) : (
                   studyLocations.map((location) => (
-                    <TableRow key={location.id} className="border-slate-700 hover:bg-slate-700/50">
-                      <TableCell className="font-medium text-white">{location.name}</TableCell>
-                      <TableCell className="text-slate-300">{location.address || "N/A"}</TableCell>
+                    <TableRow key={location.id}>
+                      <TableCell className="font-medium">{location.name}</TableCell>
+                      <TableCell>{location.address || "N/A"}</TableCell>
                       <TableCell>
                         {location.is_box ? (
-                          <Badge variant="secondary" className="bg-green-800/50 text-green-300 border-green-700">
+                          <Badge variant="secondary">
                             <Square className="mr-1 h-3 w-3" /> Study Zone
                           </Badge>
                         ) : (
-                          <Badge variant="secondary" className="bg-rose-800/50 text-rose-300 border-rose-700">
+                          <Badge variant="secondary">
                             <Circle className="mr-1 h-3 w-3" /> {location.radius}m radius
                           </Badge>
                         )}
                       </TableCell>
-                      <TableCell className="text-slate-300">{formatDate(location.created_at)}</TableCell>
+                      <TableCell>{formatDate(location.created_at)}</TableCell>
                       {isAdmin && (
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
@@ -713,22 +688,22 @@ export default function StudyLocationsPage() {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  className="h-8 w-8 p-0 text-slate-300 hover:text-white hover:bg-slate-700"
+                                  className="h-8 w-8 p-0"
                                   onClick={() => handleEditLocation(location)}
                                 >
                                   <Edit className="h-4 w-4" />
                                 </Button>
                               </DialogTrigger>
-                              <DialogContent className="bg-slate-800 border-slate-700 text-white sm:max-w-[500px] shadow-2xl">
+                              <DialogContent className="sm:max-w-[500px] shadow-2xl">
                                 <DialogHeader>
-                                  <DialogTitle className="text-white">Edit Study Location</DialogTitle>
-                                  <DialogDescription className="text-slate-300">
+                                  <DialogTitle>Edit Study Location</DialogTitle>
+                                  <DialogDescription>
                                     Update the details of this study location.
                                   </DialogDescription>
                                 </DialogHeader>
                                 <div className="grid gap-4 py-4">
                                   <div className="grid gap-2">
-                                    <Label htmlFor="edit-location-name" className="text-white">
+                                    <Label htmlFor="edit-location-name">
                                       Location Name
                                     </Label>
                                     <Input
@@ -736,14 +711,12 @@ export default function StudyLocationsPage() {
                                       name="name"
                                       value={formData.name}
                                       onChange={handleInputChange}
-                                      className={`bg-slate-700 border-slate-600 text-white placeholder:text-slate-400 ${
-                                        errors.name ? "border-red-500" : ""
-                                      }`}
+                                      className={errors.name ? "border-red-500" : ""}
                                     />
                                     {errors.name && <p className="text-sm text-red-400">{errors.name}</p>}
                                   </div>
                                   <div className="grid gap-2">
-                                    <Label htmlFor="edit-location-address" className="text-white">
+                                    <Label htmlFor="edit-location-address">
                                       Address
                                     </Label>
                                     <Input
@@ -751,12 +724,11 @@ export default function StudyLocationsPage() {
                                       name="address"
                                       value={formData.address}
                                       onChange={handleInputChange}
-                                      className="bg-slate-700 border-slate-600 text-white placeholder:text-slate-400"
                                     />
                                   </div>
                                   {!editingLocation?.is_box && (
                                     <div className="grid gap-2">
-                                      <Label htmlFor="edit-location-radius" className="text-white">
+                                      <Label htmlFor="edit-location-radius">
                                         Radius (meters): {formData.radius}m
                                       </Label>
                                       <Input
@@ -768,7 +740,6 @@ export default function StudyLocationsPage() {
                                         step="10"
                                         value={formData.radius}
                                         onChange={handleInputChange}
-                                        className="bg-slate-700"
                                       />
                                     </div>
                                   )}
@@ -780,14 +751,10 @@ export default function StudyLocationsPage() {
                                       setShowEditDialog(false)
                                       setEditingLocation(null)
                                     }}
-                                    className="bg-transparent border-slate-600 text-white hover:bg-slate-700"
                                   >
                                     Cancel
                                   </Button>
-                                  <Button
-                                    className="bg-rose-700 hover:bg-rose-800 text-white"
-                                    onClick={handleUpdateLocation}
-                                  >
+                                  <Button onClick={handleUpdateLocation}>
                                     Update Location
                                   </Button>
                                 </div>
@@ -812,27 +779,29 @@ export default function StudyLocationsPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-slate-800/90 border-slate-700/50 text-white">
+        <Card>
           <CardHeader>
-            <CardTitle className="text-white">Map View</CardTitle>
-            <CardDescription className="text-slate-300">
+            <CardTitle>Map View</CardTitle>
+            <CardDescription>
               Visual representation of all study locations and your current location.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="h-[400px] rounded-lg overflow-hidden border border-slate-600">
-              <MapComponent userLocation={userLocation} studyLocations={studyLocations} useAppleMaps={false} />
+            <div className="h-[400px] rounded-lg overflow-hidden border">
+              {!showCreateDialog && (
+                <MapComponent userLocation={userLocation} studyLocations={studyLocations} useAppleMaps={false} />
+              )}
             </div>
           </CardContent>
         </Card>
 
         {!isAdmin && (
-          <Card className="bg-slate-800/90 border-slate-700/50 text-white">
+          <Card>
             <CardContent className="pt-6">
               <div className="text-center py-6">
-                <MapPin className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium mb-2 text-white">Need a New Study Location?</h3>
-                <p className="text-sm text-slate-300 mb-4">
+                <MapPin className="h-12 w-12 mx-auto mb-4" />
+                <h3 className="text-lg font-medium mb-2">Need a New Study Location?</h3>
+                <p className="text-sm mb-4">
                   Contact your chapter administrators to request new study locations be added.
                 </p>
               </div>

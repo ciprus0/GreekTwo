@@ -1016,7 +1016,7 @@ export default function MessagesPage() {
                           <div className="flex items-center justify-between">
                             <p className={`font-medium truncate ${isActive ? "text-white" : getTextColor()}`}>
                               {conversation.type === "group"
-                                ? conversation.name || "Group Chat"
+                                ? conversation.groupChat?.name || conversation.name || "Group Chat"
                                 : otherMember?.name || "Unknown User"}
                             </p>
                             {lastMessage && (
@@ -1086,7 +1086,7 @@ export default function MessagesPage() {
                   <div>
                     <h2 className={`font-semibold ${getTextColor()}`}>
                       {activeChatType === "group"
-                        ? activeConversation?.name || "Group Chat"
+                        ? activeConversation?.groupChat?.name || activeConversation?.name || "Group Chat"
                         : activeConversation?.name || "Unknown User"}
                     </h2>
                     <p className={`text-sm ${getSecondaryTextColor()}`}>
@@ -1123,92 +1123,107 @@ export default function MessagesPage() {
                     const senderMember = members.find((m) => m.id === msg.senderId)
                     const isCurrentUser = msg.senderId === user?.id
                     const showSenderInfo = index === 0 || currentMessages[index - 1]?.senderId !== msg.senderId
+                    
+                    // Check if we need to show a date banner
+                    const currentDate = new Date(msg.timestamp).toDateString()
+                    const previousDate = index > 0 ? new Date(currentMessages[index - 1].timestamp).toDateString() : null
+                    const showDateBanner = index === 0 || currentDate !== previousDate
 
                     return (
-                      <div
-                        key={msg.id}
-                        className={`group hover:bg-slate-50/50 dark:hover:bg-slate-700/50 px-2 py-1 rounded ${showSenderInfo ? "mt-4" : "mt-0.5"}`}
-                        onMouseEnter={() => setHoveredMessage(msg.id)}
-                        onMouseLeave={() => setHoveredMessage(null)}
-                      >
-                        <div className="flex gap-3">
-                          {/* Avatar - only show for first message in group */}
-                          <div className="w-8 lg:w-10 flex-shrink-0">
-                            {showSenderInfo && (
-                              <Avatar className="w-8 h-8 lg:w-10 lg:h-10">
-                                <NextImage
-                                  src={senderMember?.profile_picture || "/placeholder.svg?height=40&width=40"}
-                                  alt={senderMember?.name || ""}
-                                  width={40}
-                                  height={40}
-                                  className="rounded-full object-cover"
-                                  loading="lazy"
-                                />
-                                <AvatarFallback>
-                                  {senderMember?.name
-                                    ?.split(" ")
-                                    .map((n) => n[0])
-                                    .join("") || ""}
-                                </AvatarFallback>
-                              </Avatar>
-                            )}
+                      <div key={msg.id}>
+                        {/* Date Banner */}
+                        {showDateBanner && (
+                          <div className="flex justify-center my-4">
+                            <div className={`px-3 py-1 rounded-full text-xs font-medium ${getSecondaryTextColor()} bg-slate-100 dark:bg-slate-800`}>
+                              {formatDate(msg.timestamp)}
+                            </div>
                           </div>
+                        )}
+                        
+                        <div
+                          className={`group hover:bg-slate-50/50 dark:hover:bg-slate-700/50 px-2 py-1 rounded ${showSenderInfo ? "mt-4" : "mt-0.5"}`}
+                          onMouseEnter={() => setHoveredMessage(msg.id)}
+                          onMouseLeave={() => setHoveredMessage(null)}
+                        >
+                          <div className="flex gap-3">
+                            {/* Avatar - only show for first message in group */}
+                            <div className="w-8 lg:w-10 flex-shrink-0">
+                              {showSenderInfo && (
+                                <Avatar className="w-8 h-8 lg:w-10 lg:h-10">
+                                  <NextImage
+                                    src={senderMember?.profile_picture || "/placeholder.svg?height=40&width=40"}
+                                    alt={senderMember?.name || ""}
+                                    width={40}
+                                    height={40}
+                                    className="rounded-full object-cover"
+                                    loading="lazy"
+                                  />
+                                  <AvatarFallback>
+                                    {senderMember?.name
+                                      ?.split(" ")
+                                      .map((n) => n[0])
+                                      .join("") || ""}
+                                  </AvatarFallback>
+                                </Avatar>
+                              )}
+                            </div>
 
-                          <div className="flex-1 min-w-0">
-                            {/* Username and timestamp - only show for first message in group */}
-                            {showSenderInfo && (
-                              <div className="flex items-baseline gap-2 mb-1">
-                                <span className={`font-medium text-sm ${getTextColor()}`}>
-                                  {senderMember?.name || "Unknown User"}
-                                </span>
-                                <span className={`text-xs ${getMutedTextColor()}`}>
-                                  {formatDateTime(msg.timestamp)}
-                                </span>
+                            <div className="flex-1 min-w-0">
+                              {/* Username and timestamp - only show for first message in group */}
+                              {showSenderInfo && (
+                                <div className="flex items-baseline gap-2 mb-1">
+                                  <span className={`font-medium text-sm ${getTextColor()}`}>
+                                    {senderMember?.name || "Unknown User"}
+                                  </span>
+                                  <span className={`text-xs ${getMutedTextColor()}`}>
+                                    {formatDateTime(msg.timestamp)}
+                                  </span>
+                                </div>
+                              )}
+
+                              {/* Message content */}
+                              <div className="space-y-2">
+                                {msg.text && (
+                                  <div className={`inline-block max-w-[85%] lg:max-w-[70%] ${isCurrentUser ? "ml-auto" : ""}`}>
+                                    <p className={`text-sm ${getTextColor()} whitespace-pre-wrap leading-relaxed ${isCurrentUser ? "bg-red-500 text-white rounded-lg px-3 py-2" : "bg-slate-100 dark:bg-slate-700 rounded-lg px-3 py-2"}`}>
+                                      {msg.text}
+                                    </p>
+                                  </div>
+                                )}
+
+                                {msg.attachments && Array.isArray(msg.attachments) && msg.attachments.length > 0 && (
+                                  <div className={`space-y-2 ${isCurrentUser ? "text-right" : ""}`}>
+                                    {msg.attachments.map((attachment) => (
+                                      <div key={attachment.id} className={`inline-block max-w-[85%] lg:max-w-[70%] rounded border overflow-hidden ${isCurrentUser ? "ml-auto" : ""}`}>
+                                        {attachment.type === "image" ? (
+                                          <a href={attachment.url} target="_blank" rel="noopener noreferrer">
+                                            <img
+                                              src={attachment.url || "/placeholder.svg"}
+                                              alt={attachment.name}
+                                              className="max-w-full max-h-[300px] object-contain"
+                                              onError={(e) => {
+                                                console.error("Failed to load image:", attachment.url)
+                                                e.currentTarget.src = "/placeholder.svg"
+                                              }}
+                                            />
+                                          </a>
+                                        ) : (
+                                          <a
+                                            href={attachment.url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex items-center gap-2 p-3 hover:bg-slate-50 dark:hover:bg-slate-700"
+                                          >
+                                            <File className="h-4 w-4" />
+                                            <span className="text-sm">{attachment.name}</span>
+                                            <span className="text-xs text-slate-500">({formatFileSize(attachment.size)})</span>
+                                          </a>
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
                               </div>
-                            )}
-
-                            {/* Message content */}
-                            <div className="space-y-2">
-                              {msg.text && (
-                                <div className={`inline-block max-w-[85%] lg:max-w-[70%] ${isCurrentUser ? "ml-auto" : ""}`}>
-                                  <p className={`text-sm ${getTextColor()} whitespace-pre-wrap leading-relaxed ${isCurrentUser ? "bg-red-500 text-white rounded-lg px-3 py-2" : "bg-slate-100 dark:bg-slate-700 rounded-lg px-3 py-2"}`}>
-                                    {msg.text}
-                                  </p>
-                                </div>
-                              )}
-
-                              {msg.attachments && Array.isArray(msg.attachments) && msg.attachments.length > 0 && (
-                                <div className={`space-y-2 ${isCurrentUser ? "text-right" : ""}`}>
-                                  {msg.attachments.map((attachment) => (
-                                    <div key={attachment.id} className={`inline-block max-w-[85%] lg:max-w-[70%] rounded border overflow-hidden ${isCurrentUser ? "ml-auto" : ""}`}>
-                                      {attachment.type === "image" ? (
-                                        <a href={attachment.url} target="_blank" rel="noopener noreferrer">
-                                          <img
-                                            src={attachment.url || "/placeholder.svg"}
-                                            alt={attachment.name}
-                                            className="max-w-full max-h-[300px] object-contain"
-                                            onError={(e) => {
-                                              console.error("Failed to load image:", attachment.url)
-                                              e.currentTarget.src = "/placeholder.svg"
-                                            }}
-                                          />
-                                        </a>
-                                      ) : (
-                                        <a
-                                          href={attachment.url}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                          className="flex items-center gap-2 p-3 hover:bg-slate-50 dark:hover:bg-slate-700"
-                                        >
-                                          <File className="h-4 w-4" />
-                                          <span className="text-sm">{attachment.name}</span>
-                                          <span className="text-xs text-slate-500">({formatFileSize(attachment.size)})</span>
-                                        </a>
-                                      )}
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
                             </div>
                           </div>
                         </div>
@@ -1392,10 +1407,10 @@ export default function MessagesPage() {
 
         {/* New Chat Dialog */}
         <Dialog open={showNewChatDialog} onOpenChange={setShowNewChatDialog}>
-          <DialogContent className="bg-slate-800 border-slate-700 text-white max-w-md shadow-2xl">
+          <DialogContent className="max-w-md shadow-2xl">
             <DialogHeader>
-              <DialogTitle className="text-white">Start New Chat</DialogTitle>
-              <DialogDescription className="text-slate-300">
+              <DialogTitle>Start New Chat</DialogTitle>
+              <DialogDescription>
                 Select members to start a conversation. Select multiple for a group chat.
               </DialogDescription>
             </DialogHeader>
@@ -1405,7 +1420,7 @@ export default function MessagesPage() {
                 <Input
                   type="search"
                   placeholder="Search members..."
-                  className="bg-slate-700 border-slate-600 text-white placeholder:text-slate-400 pl-8"
+                  className="pl-8"
                   value={newChatSearchTerm}
                   onChange={(e) => setNewChatSearchTerm(e.target.value)}
                 />
@@ -1415,7 +1430,6 @@ export default function MessagesPage() {
                 <div>
                   <Input
                     placeholder="Group chat name..."
-                    className="bg-slate-700 border-slate-600 text-white placeholder:text-slate-400"
                     value={groupChatName}
                     onChange={(e) => setGroupChatName(e.target.value)}
                   />
@@ -1436,7 +1450,7 @@ export default function MessagesPage() {
                     return (
                       <div
                         key={member.id}
-                        className="flex items-center gap-3 p-3 cursor-pointer hover:bg-slate-700/50 rounded-md border border-slate-600/50 bg-slate-700/30"
+                        className="flex items-center gap-3 p-3 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md border"
                         onClick={() => {
                           if (isSelected) {
                             setSelectedMembers((prev) => prev.filter((id) => id !== member.id))
@@ -1445,7 +1459,7 @@ export default function MessagesPage() {
                           }
                         }}
                       >
-                        <Checkbox checked={isSelected} readOnly className="border-slate-500" />
+                        <Checkbox checked={isSelected} readOnly />
                         <div className="relative">
                           <Avatar>
                             <NextImage
@@ -1456,7 +1470,7 @@ export default function MessagesPage() {
                               className="rounded-full object-cover"
                               loading="lazy"
                             />
-                            <AvatarFallback className="bg-slate-600 text-white">
+                            <AvatarFallback>
                               {member.name.split(" ").map((n) => n[0])}
                             </AvatarFallback>
                           </Avatar>
@@ -1465,8 +1479,8 @@ export default function MessagesPage() {
                           )}
                         </div>
                         <div className="flex-1">
-                          <p className="font-medium text-white">{member.name}</p>
-                          <p className="text-xs text-green-400">{isOnline ? "Online" : "Offline"}</p>
+                          <p className="font-medium">{member.name}</p>
+                          <p className="text-xs text-green-600 dark:text-green-400">{isOnline ? "Online" : "Offline"}</p>
                         </div>
                       </div>
                     )
@@ -1474,35 +1488,26 @@ export default function MessagesPage() {
                 {members.filter(
                   (member) =>
                     member.id !== user?.id && member.name.toLowerCase().includes(debouncedNewChatSearch.toLowerCase()),
-                ).length === 0 && <div className="text-center py-4 text-slate-400">No members found</div>}
+                ).length === 0 && <div className="text-center py-4 text-slate-500">No members found</div>}
               </div>
 
               {selectedMembers.length > 0 && (
-                <div className="text-sm text-slate-300">
+                <div className="text-sm text-slate-600 dark:text-slate-300">
                   {selectedMembers.length} member{selectedMembers.length > 1 ? "s" : ""} selected
                   {selectedMembers.length > 1 && " (Group Chat)"}
                 </div>
               )}
             </div>
             <DialogFooter>
-              <Button
-                variant="outline"
-                className="bg-transparent border-slate-600 text-white hover:bg-slate-700"
-                onClick={() => {
-                  setShowNewChatDialog(false)
-                  setSelectedMembers([])
-                  setGroupChatName("")
-                  setNewChatSearchTerm("")
-                }}
-              >
+              <Button variant="outline" onClick={() => setShowNewChatDialog(false)}>
                 Cancel
               </Button>
               <Button
                 onClick={handleCreateChat}
                 disabled={selectedMembers.length === 0 || (selectedMembers.length > 1 && !groupChatName.trim())}
-                className="bg-rose-600 hover:bg-rose-700 text-white"
+                className={`${getButtonClasses("default")}`}
               >
-                {selectedMembers.length > 1 ? "Create Group" : "Start Chat"}
+                Start Chat
               </Button>
             </DialogFooter>
           </DialogContent>

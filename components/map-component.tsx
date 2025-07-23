@@ -157,8 +157,10 @@ export default function MapComponent({
     }
 
     if (onMapMove) {
-      map.on("moveend", () => {
-        onMapMove(map.getCenter())
+      map.on("mousemove", (e) => {
+        if (clickMode) {
+          onMapMove(e.latlng)
+        }
       })
     }
 
