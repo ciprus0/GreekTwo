@@ -145,20 +145,59 @@ export default function MessagesPage() {
 
           for (const conversation of processedConversations) {
             const chatId = conversation.id
-            const messages = conversation.messages.map((msg: any) => ({
-              id: msg.id,
-              senderId: msg.sender_id,
-              text: msg.text,
-              timestamp: msg.created_at,
-              reactions: msg.reactions || {},
-              attachments: Array.isArray(msg.attachments) ? msg.attachments.map((attachment: any) => ({
-                id: attachment.id || Date.now().toString(),
-                name: attachment.name,
-                type: attachment.type,
-                size: attachment.size,
-                url: attachment.url, // This should be the Supabase storage URL
-              })) : [],
-            }))
+            const messages = conversation.messages.map((msg: any) => {
+              // Handle different attachment formats
+              let processedAttachments = []
+              
+              if (msg.attachments) {
+                if (Array.isArray(msg.attachments)) {
+                  // Handle array of attachment objects
+                  processedAttachments = msg.attachments.map((attachment: any) => ({
+                    id: attachment.id || Date.now().toString(),
+                    name: attachment.name || 'Attachment',
+                    type: attachment.type || 'application/octet-stream',
+                    size: attachment.size || 0,
+                    url: attachment.url,
+                  }))
+                } else if (typeof msg.attachments === 'string') {
+                  // Handle single URL string (remove @ prefix if present)
+                  const url = msg.attachments.startsWith('@') ? msg.attachments.substring(1) : msg.attachments
+                  
+                  // Determine file type and name from URL
+                  const urlParts = url.split('/')
+                  const fileName = urlParts[urlParts.length - 1] || 'attachment'
+                  const fileExtension = fileName.split('.').pop()?.toLowerCase() || ''
+                  
+                  let fileType = 'application/octet-stream'
+                  if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExtension)) {
+                    fileType = 'image'
+                  } else if (['pdf'].includes(fileExtension)) {
+                    fileType = 'application/pdf'
+                  } else if (['doc', 'docx'].includes(fileExtension)) {
+                    fileType = 'application/msword'
+                  } else if (['xls', 'xlsx'].includes(fileExtension)) {
+                    fileType = 'application/vnd.ms-excel'
+                  }
+                  
+                  processedAttachments = [{
+                    id: `attachment_${msg.id}_${Date.now()}`,
+                    name: fileName,
+                    type: fileType,
+                    size: 0, // Size not available from URL
+                    url: url,
+                  }]
+                }
+              }
+              
+              return {
+                id: msg.id,
+                senderId: msg.sender_id,
+                text: msg.text,
+                timestamp: msg.created_at,
+                reactions: msg.reactions || {},
+                attachments: processedAttachments,
+              }
+            })
 
             formattedChats[chatId] = messages.sort(
               (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
@@ -268,7 +307,7 @@ export default function MessagesPage() {
           recipient_id: null, // Group messages don't have a specific recipient
           group_chat_id: groupChatId,
           text: message,
-          attachments: uploadedAttachments,
+          attachments: uploadedAttachments.length > 0 ? uploadedAttachments[0].url : null, // Send just the URL string
           reactions: {},
           organization_id: user.organizationId,
         }
@@ -279,7 +318,7 @@ export default function MessagesPage() {
           recipient_id: activeChat, // This is already the recipient's ID
           group_chat_id: null,
           text: message,
-          attachments: uploadedAttachments,
+          attachments: uploadedAttachments.length > 0 ? uploadedAttachments[0].url : null, // Send just the URL string
           reactions: {},
           organization_id: user.organizationId,
         }
@@ -295,7 +334,13 @@ export default function MessagesPage() {
         text: savedMessage.text,
         timestamp: savedMessage.created_at,
         reactions: savedMessage.reactions || {},
-        attachments: savedMessage.attachments || [],
+        attachments: savedMessage.attachments ? [{
+          id: `attachment_${savedMessage.id}_${Date.now()}`,
+          name: savedMessage.attachments.split('/').pop() || 'attachment',
+          type: savedMessage.attachments.includes('.jpg') || savedMessage.attachments.includes('.jpeg') || savedMessage.attachments.includes('.png') ? 'image' : 'application/octet-stream',
+          size: 0,
+          url: savedMessage.attachments,
+        }] : [],
       }
 
       // Update chats
@@ -772,6 +817,7 @@ export default function MessagesPage() {
   )
 
   const formatFileSize = useCallback((bytes) => {
+    if (bytes === 0 || bytes === null || bytes === undefined) return "Unknown size"
     if (bytes < 1024) return bytes + " B"
     else if (bytes < 1048576) return (bytes / 1024).toFixed(1) + " KB"
     else return (bytes / 1048576).toFixed(1) + " MB"
