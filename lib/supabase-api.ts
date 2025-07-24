@@ -142,7 +142,7 @@ export interface Message {
     type: string
     size: number
     url: string
-  }>
+  }> | string | null // Can be array of objects, URL string, or null
   reactions: Record<string, string[]>
   organization_id: string
   created_at: string
@@ -1643,11 +1643,13 @@ export const api = {
   },
 
   async createMessage(messageData: Omit<Message, "id" | "created_at">): Promise<Message> {
+    console.log('📝 Creating message with attachments:', messageData.attachments)
+    
     const { data, error } = await supabase
       .from("messages")
       .insert({
         ...messageData,
-        attachments: messageData.attachments || [],
+        attachments: messageData.attachments || null, // Allow null instead of forcing empty array
         reactions: messageData.reactions || {},
       })
       .select()
@@ -1656,6 +1658,8 @@ export const api = {
       console.error("❌ Error creating message:", error)
       throw new Error(`Failed to create message: ${error.message}`)
     }
+    
+    console.log('✅ Message created successfully:', data)
     return data as Message
   },
 

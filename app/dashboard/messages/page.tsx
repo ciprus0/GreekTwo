@@ -56,7 +56,13 @@ export default function MessagesPage() {
   const [members, setMembers] = useState([])
   const [chats, setChats] = useState({})
   const [searchTerm, setSearchTerm] = useState("")
-  const [attachments, setAttachments] = useState([])
+  const [attachments, setAttachments] = useState<Array<{
+    id: string
+    name: string
+    type: string
+    size: number
+    url: string
+  }>>([])
   const [reactionMessage, setReactionMessage] = useState(null)
   const [hoveredMessage, setHoveredMessage] = useState(null)
   const [reactionPopoverOpen, setReactionPopoverOpen] = useState(false)
@@ -195,13 +201,16 @@ export default function MessagesPage() {
               if (msg.attachments) {
                 if (Array.isArray(msg.attachments)) {
                   // Handle array of attachment objects
-                  processedAttachments = msg.attachments.map((attachment: any) => ({
-                    id: attachment.id || Date.now().toString(),
-                    name: attachment.name || 'Attachment',
-                    type: attachment.type || 'application/octet-stream',
-                    size: attachment.size || 0,
-                    url: attachment.url,
-                  }))
+                  if (msg.attachments.length > 0) {
+                    processedAttachments = msg.attachments.map((attachment: any) => ({
+                      id: attachment.id || Date.now().toString(),
+                      name: attachment.name || 'Attachment',
+                      type: attachment.type || 'application/octet-stream',
+                      size: attachment.size || 0,
+                      url: attachment.url,
+                    }))
+                  }
+                  // If attachments is [], leave processedAttachments as empty array
                 } else if (typeof msg.attachments === 'string') {
                   // Handle single URL string (remove @ prefix if present)
                   const url = msg.attachments.startsWith('@') ? msg.attachments.substring(1) : msg.attachments
@@ -275,7 +284,13 @@ export default function MessagesPage() {
 
     try {
       // Upload attachments to Supabase storage first
-      const uploadedAttachments = []
+      const uploadedAttachments: Array<{
+        id: string
+        name: string
+        type: string
+        size: number
+        url: string
+      }> = []
       
       for (const attachment of attachments) {
         try {
@@ -285,16 +300,16 @@ export default function MessagesPage() {
           const file = new File([blob], attachment.name, { type: attachment.type })
           
           // Compress image if it's an image
-          let processedFile = file
+          let processedFile: File = file
           if (attachment.type.startsWith('image/')) {
             try {
-              const compressedBlob = await compressImage(blob, {
+              const compressedFile = await compressImage(file, {
                 quality: 0.8,
                 maxWidth: 1920,
                 maxHeight: 1920,
                 format: 'jpeg'
               })
-              processedFile = new File([compressedBlob], attachment.name, { type: 'image/jpeg' })
+              processedFile = compressedFile
             } catch (compressionError) {
               console.warn('Image compression failed, using original:', compressionError)
             }
@@ -350,6 +365,8 @@ export default function MessagesPage() {
         }
       }
 
+      console.log('📎 Uploaded attachments:', uploadedAttachments)
+      
       let messageData
 
       if (activeChatType === "group") {
