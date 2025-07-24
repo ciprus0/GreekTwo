@@ -330,45 +330,24 @@ export default function MessagesPage() {
           const sanitizedFileName = attachment.name.replace(/[^a-zA-Z0-9.-]/g, "_")
           const filePath = `${user.organizationId}/${timestamp}-${sanitizedFileName}`
           
-          // Upload to Supabase storage using direct client approach
-          console.log('📤 Preparing direct Supabase upload...')
+          // TEMPORARY: Store file data as base64 to avoid upload issues
+          console.log('📤 Converting file to base64 for temporary storage...')
           
-          // Import Supabase client dynamically to avoid constructor issues
-          const { createClient } = await import('@supabase/supabase-js')
-          const supabase = createClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL!,
-            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-          )
+          const reader = new FileReader()
+          const base64Promise = new Promise((resolve, reject) => {
+            reader.onload = () => resolve(reader.result)
+            reader.onerror = reject
+          })
           
-          console.log('📤 Uploading directly to Supabase storage...')
-          const { data: uploadData, error: uploadError } = await supabase.storage
-            .from('convo-images')
-            .upload(filePath, processedFile, {
-              upsert: true,
-              cacheControl: 'public, max-age=31536000'
-            })
+          reader.readAsDataURL(processedFile)
+          const base64Data = await base64Promise as string
           
-          if (uploadError) {
-            console.error('❌ Direct upload error:', uploadError)
-            throw new Error(`Direct upload failed: ${uploadError.message}`)
-          }
+          console.log('📤 Base64 conversion successful, length:', base64Data.length)
           
-          console.log('📤 Getting public URL...')
-          const { data: publicUrlData } = supabase.storage
-            .from('convo-images')
-            .getPublicUrl(filePath)
-          
-          if (!publicUrlData?.publicUrl) {
-            throw new Error('Failed to get public URL from direct upload')
-          }
-          
-          const publicUrl = publicUrlData.publicUrl
-          console.log('📤 Direct upload successful, URL:', publicUrl)
-          
-          console.log('✅ Attachment uploaded successfully:', {
+          console.log('✅ Attachment processed successfully:', {
             name: attachment.name,
-            url: publicUrl,
-            size: attachment.size
+            size: attachment.size,
+            base64Length: base64Data.length
           })
           
           uploadedAttachments.push({
@@ -376,7 +355,7 @@ export default function MessagesPage() {
             name: attachment.name,
             type: attachment.type,
             size: attachment.size,
-            url: publicUrl
+            url: base64Data // Store base64 data as URL for now
           })
         } catch (uploadError) {
           console.error('Failed to upload attachment:', uploadError)
@@ -400,7 +379,7 @@ export default function MessagesPage() {
           recipient_id: null, // Group messages don't have a specific recipient
           group_chat_id: groupChatId,
           text: message,
-          attachments: uploadedAttachments.length > 0 ? uploadedAttachments[0].url : null, // Send just the URL string
+          attachments: uploadedAttachments.length > 0 ? uploadedAttachments[0].url : null, // Send base64 data as URL string
           reactions: {},
           organization_id: user.organizationId,
         }
@@ -411,7 +390,7 @@ export default function MessagesPage() {
           recipient_id: activeChat, // This is already the recipient's ID
           group_chat_id: null,
           text: message,
-          attachments: uploadedAttachments.length > 0 ? uploadedAttachments[0].url : null, // Send just the URL string
+          attachments: uploadedAttachments.length > 0 ? uploadedAttachments[0].url : null, // Send base64 data as URL string
           reactions: {},
           organization_id: user.organizationId,
         }
@@ -431,8 +410,8 @@ export default function MessagesPage() {
         reactions: savedMessage.reactions || {},
         attachments: savedMessage.attachments ? [{
           id: `attachment_${savedMessage.id}_${Date.now()}`,
-          name: savedMessage.attachments.split('/').pop() || 'attachment',
-          type: savedMessage.attachments.includes('.jpg') || savedMessage.attachments.includes('.jpeg') || savedMessage.attachments.includes('.png') ? 'image' : 'application/octet-stream',
+          name: savedMessage.attachments.startsWith('data:') ? 'attachment' : savedMessage.attachments.split('/').pop() || 'attachment',
+          type: savedMessage.attachments.startsWith('data:image/') ? 'image' : 'application/octet-stream',
           size: 0,
           url: savedMessage.attachments,
         }] : [],
