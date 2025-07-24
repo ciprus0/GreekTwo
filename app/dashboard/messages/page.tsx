@@ -76,6 +76,8 @@ export default function MessagesPage() {
   const [removingMember, setRemovingMember] = useState(null)
   const mountedRef = useRef(true)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [showImagePreview, setShowImagePreview] = useState(false)
+  const [previewImage, setPreviewImage] = useState(null)
 
   const { getTextColor, getSecondaryTextColor, getMutedTextColor, getAccentTextColor } = useTextColors()
   const { theme } = useTheme()
@@ -117,6 +119,30 @@ export default function MessagesPage() {
       default:
         return "glass-input"
     }
+  }
+
+  // Get theme-aware dialog classes (solid colors for dark theme to avoid lag)
+  const getDialogClasses = () => {
+    switch (theme) {
+      case "original":
+        return "bg-white border border-gray-200 shadow-lg"
+      case "light":
+        return "bg-white/95 backdrop-blur-sm border border-blue-200/60 shadow-lg"
+      case "dark":
+      default:
+        return "bg-slate-800 border border-slate-700 shadow-lg"
+    }
+  }
+
+  // Helper function to optimize image URLs for better performance and cost
+  // This can be enhanced to use Supabase's image transformations or CDN optimization
+  const getOptimizedImageUrl = (url: string, width?: number, height?: number) => {
+    if (!url) return url
+    
+    // For now, return the original URL
+    // TODO: Implement Supabase image transformations or CDN optimization
+    // Example: return `${url}?width=${width}&height=${height}&quality=80`
+    return url
   }
 
   // Debounced search to reduce API calls
@@ -527,6 +553,11 @@ export default function MessagesPage() {
 
   const removeAttachment = useCallback((id) => {
     setAttachments((prev) => prev.filter((attachment) => attachment.id !== id))
+  }, [])
+
+  const handleImagePreview = useCallback((imageUrl, imageName) => {
+    setPreviewImage(imageUrl)
+    setShowImagePreview(true)
   }, [])
 
   const handleAddReaction = useCallback(
@@ -1295,17 +1326,20 @@ export default function MessagesPage() {
                                     {msg.attachments.map((attachment) => (
                                       <div key={attachment.id} className={`inline-block max-w-[85%] lg:max-w-[70%] rounded border overflow-hidden ${isCurrentUser ? "ml-auto" : ""}`}>
                                         {attachment.type === "image" ? (
-                                          <a href={attachment.url} target="_blank" rel="noopener noreferrer">
+                                          <div 
+                                            className="cursor-pointer"
+                                            onClick={() => handleImagePreview(attachment.url, attachment.name)}
+                                          >
                                             <img
-                                              src={attachment.url || "/placeholder.svg"}
+                                              src={getOptimizedImageUrl(attachment.url, 400, 300) || "/placeholder.svg"}
                                               alt={attachment.name}
-                                              className="max-w-full max-h-[300px] object-contain"
+                                              className="max-w-full max-h-[300px] object-contain hover:opacity-90 transition-opacity"
                                               onError={(e) => {
                                                 console.error("Failed to load image:", attachment.url)
                                                 e.currentTarget.src = "/placeholder.svg"
                                               }}
                                             />
-                                          </a>
+                                          </div>
                                         ) : (
                                           <a
                                             href={attachment.url}
@@ -1636,6 +1670,28 @@ export default function MessagesPage() {
                 {deletingConversation ? "Deleting..." : "Delete"}
               </Button>
             </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Image Preview Dialog */}
+        <Dialog open={showImagePreview} onOpenChange={setShowImagePreview}>
+          <DialogContent className={`sm:max-w-[800px] max-h-[90vh] ${getDialogClasses()}`}>
+            <DialogHeader>
+              <DialogTitle className={getTextColor()}>Image Preview</DialogTitle>
+            </DialogHeader>
+            <div className="flex justify-center items-center">
+              {previewImage && (
+                <img
+                  src={getOptimizedImageUrl(previewImage, 800, 600)}
+                  alt="Preview"
+                  className="max-w-full max-h-[70vh] object-contain rounded"
+                  onError={(e) => {
+                    console.error("Failed to load preview image:", previewImage)
+                    e.currentTarget.src = "/placeholder.svg"
+                  }}
+                />
+              )}
+            </div>
           </DialogContent>
         </Dialog>
     </ThemeWrapper>
