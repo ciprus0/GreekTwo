@@ -294,10 +294,18 @@ export default function MessagesPage() {
       
       for (const attachment of attachments) {
         try {
+          console.log('🔄 Starting upload for attachment:', attachment.name)
+          
           // Convert blob URL back to file
+          console.log('📥 Fetching blob from URL:', attachment.url)
           const response = await fetch(attachment.url)
+          console.log('📦 Response status:', response.status)
+          
           const blob = await response.blob()
+          console.log('📦 Blob size:', blob.size, 'type:', blob.type)
+          
           const file = new File([blob], attachment.name, { type: attachment.type })
+          console.log('📁 File created:', file.name, 'size:', file.size, 'type:', file.type)
           
           // Compress image if it's an image
           let processedFile: File = file
@@ -323,19 +331,24 @@ export default function MessagesPage() {
           const filePath = `${user.organizationId}/${timestamp}-${sanitizedFileName}`
           
           // Upload to Supabase storage
+          console.log('📤 Preparing upload to Supabase...')
           const formData = new FormData()
           formData.append('file', processedFile)
           formData.append('bucketName', 'convo-images')
           formData.append('filePath', filePath)
           formData.append('userId', user.id)
           
+          console.log('📤 Sending upload request...')
           const uploadResponse = await fetch('/api/storage/upload', {
             method: 'POST',
             body: formData
           })
+          console.log('📤 Upload response status:', uploadResponse.status)
           
           if (!uploadResponse.ok) {
-            throw new Error('Failed to upload attachment')
+            const errorText = await uploadResponse.text()
+            console.error('❌ Upload failed with status:', uploadResponse.status, 'Response:', errorText)
+            throw new Error(`Failed to upload attachment: ${uploadResponse.status} - ${errorText}`)
           }
           
           const uploadResult = await uploadResponse.json()
