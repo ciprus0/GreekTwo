@@ -20,7 +20,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import NextImage from "next/image"
 import { ThemeWrapper, useTextColors } from "@/components/theme-wrapper"
 import { useTheme } from "@/lib/theme-context"
-import { compressImage } from "@/lib/file-storage"
+// import { compressImage } from "@/lib/file-storage"
 import { useDebounce, useCleanup } from "@/lib/performance-utils"
 
 // Emoji picker data
@@ -303,13 +303,15 @@ export default function MessagesPage() {
           let processedFile: File = file
           if (attachment.type.startsWith('image/')) {
             try {
-              const compressedFile = await compressImage(file, {
-                quality: 0.8,
-                maxWidth: 1920,
-                maxHeight: 1920,
-                format: 'jpeg'
-              })
-              processedFile = compressedFile
+              // Temporarily disable compression to fix upload issue
+              console.log('Skipping image compression for now to fix upload')
+              // const compressedFile = await compressImage(file, {
+              //   quality: 0.8,
+              //   maxWidth: 1920,
+              //   maxHeight: 1920,
+              //   format: 'jpeg'
+              // })
+              // processedFile = compressedFile
             } catch (compressionError) {
               console.warn('Image compression failed, using original:', compressionError)
             }
