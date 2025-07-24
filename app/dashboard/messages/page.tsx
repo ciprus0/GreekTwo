@@ -135,14 +135,31 @@ export default function MessagesPage() {
   }
 
   // Helper function to optimize image URLs for better performance and cost
-  // This can be enhanced to use Supabase's image transformations or CDN optimization
   const getOptimizedImageUrl = (url: string, width?: number, height?: number) => {
     if (!url) return url
     
-    // For now, return the original URL
-    // TODO: Implement Supabase image transformations or CDN optimization
-    // Example: return `${url}?width=${width}&height=${height}&quality=80`
+    // For production: Use Supabase image transformations
+    // This reduces egress costs by serving optimized images
+    if (url.includes('supabase.co') && (width || height)) {
+      const params = new URLSearchParams()
+      if (width) params.append('width', width.toString())
+      if (height) params.append('height', height.toString())
+      params.append('quality', '80')
+      params.append('format', 'webp') // Better compression
+      return `${url}?${params.toString()}`
+    }
+    
     return url
+  }
+
+  // Helper function to get thumbnail URL for previews
+  const getThumbnailUrl = (url: string) => {
+    return getOptimizedImageUrl(url, 150, 150)
+  }
+
+  // Helper function to get optimized preview URL
+  const getPreviewUrl = (url: string) => {
+    return getOptimizedImageUrl(url, 400, 300)
   }
 
   // Debounced search to reduce API calls
@@ -304,14 +321,24 @@ export default function MessagesPage() {
             throw new Error('Failed to upload attachment')
           }
           
-          const { publicUrl } = await uploadResponse.json()
+          const uploadResult = await uploadResponse.json()
+          
+          if (!uploadResult.publicUrl) {
+            throw new Error('No public URL returned from upload')
+          }
+          
+          console.log('✅ Attachment uploaded successfully:', {
+            name: attachment.name,
+            url: uploadResult.publicUrl,
+            size: attachment.size
+          })
           
           uploadedAttachments.push({
             id: attachment.id,
             name: attachment.name,
             type: attachment.type,
             size: attachment.size,
-            url: publicUrl
+            url: uploadResult.publicUrl
           })
         } catch (uploadError) {
           console.error('Failed to upload attachment:', uploadError)
@@ -351,7 +378,9 @@ export default function MessagesPage() {
       }
 
       // Save to Supabase
+      console.log('Saving message with data:', messageData)
       const savedMessage = await api.createMessage(messageData)
+      console.log('Message saved successfully:', savedMessage)
 
       // Update local state
       const newMessage = {
@@ -1331,9 +1360,10 @@ export default function MessagesPage() {
                                             onClick={() => handleImagePreview(attachment.url, attachment.name)}
                                           >
                                             <img
-                                              src={getOptimizedImageUrl(attachment.url, 400, 300) || "/placeholder.svg"}
+                                              src={getThumbnailUrl(attachment.url) || "/placeholder.svg"}
                                               alt={attachment.name}
                                               className="max-w-full max-h-[300px] object-contain hover:opacity-90 transition-opacity"
+                                              loading="lazy"
                                               onError={(e) => {
                                                 console.error("Failed to load image:", attachment.url)
                                                 e.currentTarget.src = "/placeholder.svg"
@@ -1682,7 +1712,7 @@ export default function MessagesPage() {
             <div className="flex justify-center items-center">
               {previewImage && (
                 <img
-                  src={getOptimizedImageUrl(previewImage, 800, 600)}
+                  src={getPreviewUrl(previewImage)}
                   alt="Preview"
                   className="max-w-full max-h-[70vh] object-contain rounded"
                   onError={(e) => {
