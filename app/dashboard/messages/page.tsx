@@ -294,7 +294,14 @@ export default function MessagesPage() {
       
       for (const attachment of attachments) {
         try {
-          console.log('🔄 Starting upload for attachment:', attachment.name)
+          console.log('🔄 Starting upload for attachment:', attachment)
+          console.log('🔄 Attachment details:', {
+            id: attachment.id,
+            name: attachment.name,
+            type: attachment.type,
+            size: attachment.size,
+            url: attachment.url
+          })
           
           // Convert blob URL back to file
           console.log('📥 Fetching blob from URL:', attachment.url)
@@ -304,6 +311,7 @@ export default function MessagesPage() {
           const blob = await response.blob()
           console.log('📦 Blob size:', blob.size, 'type:', blob.type)
           
+          console.log('📁 About to create File object...')
           const file = new File([blob], attachment.name, { type: attachment.type })
           console.log('📁 File created:', file.name, 'size:', file.size, 'type:', file.type)
           
