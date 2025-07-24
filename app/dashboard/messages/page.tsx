@@ -311,35 +311,18 @@ export default function MessagesPage() {
           const blob = await response.blob()
           console.log('📦 Blob size:', blob.size, 'type:', blob.type)
           
-          console.log('📁 About to create File object...')
-          const file = new File([blob], attachment.name, { type: attachment.type })
-          console.log('📁 File created:', file.name, 'size:', file.size, 'type:', file.type)
+          console.log('📁 Skipping File creation, working directly with blob...')
           
-          // Compress image if it's an image
-          let processedFile: File = file
-          if (attachment.type.startsWith('image/')) {
-            try {
-              // Temporarily disable compression to fix upload issue
-              console.log('Skipping image compression for now to fix upload')
-              // const compressedFile = await compressImage(file, {
-              //   quality: 0.8,
-              //   maxWidth: 1920,
-              //   maxHeight: 1920,
-              //   format: 'jpeg'
-              // })
-              // processedFile = compressedFile
-            } catch (compressionError) {
-              console.warn('Image compression failed, using original:', compressionError)
-            }
-          }
+          // Work directly with blob instead of creating File object
+          let processedBlob = blob
           
           // Generate unique file path
           const timestamp = Date.now()
           const sanitizedFileName = attachment.name.replace(/[^a-zA-Z0-9.-]/g, "_")
           const filePath = `${user.organizationId}/${timestamp}-${sanitizedFileName}`
           
-          // TEMPORARY: Store file data as base64 to avoid upload issues
-          console.log('📤 Converting file to base64 for temporary storage...')
+          // TEMPORARY: Store blob data as base64 to avoid upload issues
+          console.log('📤 Converting blob to base64 for temporary storage...')
           
           const reader = new FileReader()
           const base64Promise = new Promise((resolve, reject) => {
@@ -347,7 +330,7 @@ export default function MessagesPage() {
             reader.onerror = reject
           })
           
-          reader.readAsDataURL(processedFile)
+          reader.readAsDataURL(processedBlob)
           const base64Data = await base64Promise as string
           
           console.log('📤 Base64 conversion successful, length:', base64Data.length)
