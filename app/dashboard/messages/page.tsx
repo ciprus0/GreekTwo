@@ -330,36 +330,44 @@ export default function MessagesPage() {
           const sanitizedFileName = attachment.name.replace(/[^a-zA-Z0-9.-]/g, "_")
           const filePath = `${user.organizationId}/${timestamp}-${sanitizedFileName}`
           
-          // Upload to Supabase storage
-          console.log('📤 Preparing upload to Supabase...')
-          const formData = new FormData()
-          formData.append('file', processedFile)
-          formData.append('bucketName', 'convo-images')
-          formData.append('filePath', filePath)
-          formData.append('userId', user.id)
+          // Upload to Supabase storage using direct client approach
+          console.log('📤 Preparing direct Supabase upload...')
           
-          console.log('📤 Sending upload request...')
-          const uploadResponse = await fetch('/api/storage/upload', {
-            method: 'POST',
-            body: formData
-          })
-          console.log('📤 Upload response status:', uploadResponse.status)
+          // Import Supabase client dynamically to avoid constructor issues
+          const { createClient } = await import('@supabase/supabase-js')
+          const supabase = createClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+          )
           
-          if (!uploadResponse.ok) {
-            const errorText = await uploadResponse.text()
-            console.error('❌ Upload failed with status:', uploadResponse.status, 'Response:', errorText)
-            throw new Error(`Failed to upload attachment: ${uploadResponse.status} - ${errorText}`)
+          console.log('📤 Uploading directly to Supabase storage...')
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('convo-images')
+            .upload(filePath, processedFile, {
+              upsert: true,
+              cacheControl: 'public, max-age=31536000'
+            })
+          
+          if (uploadError) {
+            console.error('❌ Direct upload error:', uploadError)
+            throw new Error(`Direct upload failed: ${uploadError.message}`)
           }
           
-          const uploadResult = await uploadResponse.json()
+          console.log('📤 Getting public URL...')
+          const { data: publicUrlData } = supabase.storage
+            .from('convo-images')
+            .getPublicUrl(filePath)
           
-          if (!uploadResult.publicUrl) {
-            throw new Error('No public URL returned from upload')
+          if (!publicUrlData?.publicUrl) {
+            throw new Error('Failed to get public URL from direct upload')
           }
+          
+          const publicUrl = publicUrlData.publicUrl
+          console.log('📤 Direct upload successful, URL:', publicUrl)
           
           console.log('✅ Attachment uploaded successfully:', {
             name: attachment.name,
-            url: uploadResult.publicUrl,
+            url: publicUrl,
             size: attachment.size
           })
           
@@ -368,7 +376,7 @@ export default function MessagesPage() {
             name: attachment.name,
             type: attachment.type,
             size: attachment.size,
-            url: uploadResult.publicUrl
+            url: publicUrl
           })
         } catch (uploadError) {
           console.error('Failed to upload attachment:', uploadError)
