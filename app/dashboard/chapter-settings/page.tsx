@@ -597,9 +597,9 @@ export default function ChapterSettingsPage() {
 function InviteMembersButton({ organization }) {
   const [showInviteDialog, setShowInviteDialog] = useState(false)
   const { theme } = useTheme()
-  const { getTextColor, getCardClasses, getButtonClasses } = useTextColors()
+  const { getTextColor, getSecondaryTextColor, getCardClasses, getButtonClasses } = useTextColors()
 
-  const invitationUrl = organization ? `${window.location.origin}/register?org=${organization.id}` : ''
+  const invitationUrl = organization ? `${window.location.origin}/register?org=${organization.group_id}` : ''
   
   const copyToClipboard = async () => {
     try {
@@ -639,7 +639,7 @@ function InviteMembersButton({ organization }) {
           <div className="px-2 py-1.5">
             <p className={`text-xs ${getTextColor()} font-medium mb-1`}>Group ID</p>
             <p className={`text-xs ${getSecondaryTextColor()} font-mono bg-slate-700/30 px-2 py-1 rounded`}>
-              {organization?.id || 'N/A'}
+              {organization?.group_id || 'N/A'}
             </p>
           </div>
           <DropdownMenuSeparator className="bg-slate-700/50" />

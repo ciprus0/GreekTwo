@@ -39,14 +39,14 @@ export default function RegisterPage() {
   useEffect(() => {
     loadOrganizations()
     
-    // Check for organization ID in URL
-    const orgId = searchParams.get('org')
-    if (orgId) {
-      setFormData(prev => ({ ...prev, organization_id: orgId }))
-      // Find and set the selected organization
-      api.getOrganizationById(orgId).then(org => {
+    // Check for organization group_id in URL
+    const groupId = searchParams.get('org')
+    if (groupId) {
+      // Find organization by group_id
+      api.getOrganizationByGroupId(groupId).then(org => {
         if (org) {
           setSelectedOrganization(org)
+          setFormData(prev => ({ ...prev, organization_id: org.id }))
         }
       }).catch(err => {
         console.error('Error loading organization:', err)
@@ -317,13 +317,13 @@ export default function RegisterPage() {
                   <SelectTrigger className={getInputClasses()}>
                     <SelectValue placeholder="Select your organization" />
                   </SelectTrigger>
-                  <SelectContent>
-                    {organizations.map((org) => (
-                      <SelectItem key={org.id} value={org.id}>
-                        {org.name} ({org.id})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
+                                     <SelectContent>
+                     {organizations.map((org) => (
+                       <SelectItem key={org.id} value={org.id}>
+                         {org.name} ({org.group_id})
+                       </SelectItem>
+                     ))}
+                   </SelectContent>
                 </Select>
                 {searchParams.get('org') && (
                   <p className="text-xs text-green-500 mt-1">
