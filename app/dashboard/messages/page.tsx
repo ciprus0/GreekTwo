@@ -1071,11 +1071,11 @@ export default function MessagesPage() {
 
   return (
     <ThemeWrapper>
-      <div className="flex h-[calc(100vh-80px)] bg-slate-50 dark:bg-slate-900">
+      <div className={`flex h-[calc(100vh-80px)] ${theme === 'dark' ? 'bg-slate-900' : theme === 'light' ? 'bg-gradient-to-br from-blue-50 via-white to-blue-50' : 'bg-slate-50'}`}>
         {/* Sidebar - Discord style */}
-        <div className="w-80 bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 flex flex-col">
+        <div className={`w-80 ${theme === 'dark' ? 'bg-slate-800' : theme === 'light' ? 'bg-white/95 backdrop-blur-sm' : 'bg-white'} border-r ${theme === 'dark' ? 'border-slate-700' : theme === 'light' ? 'border-blue-200/50' : 'border-slate-200'} flex flex-col`}>
           {/* Header */}
-          <div className="p-4 border-b border-slate-200 dark:border-slate-700">
+          <div className={`p-4 border-b ${theme === 'dark' ? 'border-slate-700' : theme === 'light' ? 'border-blue-200/50' : 'border-slate-200'}`}>
             <div className="flex items-center justify-between">
               <h1 className={`text-xl font-bold ${getTextColor()}`}>Messages</h1>
               <Button
@@ -1088,15 +1088,15 @@ export default function MessagesPage() {
           </div>
 
           {/* Search */}
-          <div className="p-4 border-b border-slate-200 dark:border-slate-700">
+          <div className={`p-4 border-b ${theme === 'dark' ? 'border-slate-700' : theme === 'light' ? 'border-blue-200/50' : 'border-slate-200'}`}>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <Input
-                placeholder="Search conversations..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className={`pl-10 ${getCardClasses()} border-slate-200 dark:border-slate-700`}
-              />
+                              <Input
+                  placeholder="Search conversations..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className={`pl-10 ${getInputClasses()}`}
+                />
             </div>
           </div>
 
@@ -1193,7 +1193,7 @@ export default function MessagesPage() {
         </div>
 
         {/* Main Chat Area */}
-        <div className="flex-1 flex flex-col bg-white dark:bg-slate-800">
+        <div className={`flex-1 flex flex-col ${theme === 'dark' ? 'bg-slate-800' : theme === 'light' ? 'bg-white/95 backdrop-blur-sm' : 'bg-white'}`}>
           {activeChat ? (
             <>
               {/* Chat Header */}

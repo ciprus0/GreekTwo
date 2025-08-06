@@ -54,6 +54,17 @@ export default function AnnouncementsPage() {
   const { getTextColor, getSecondaryTextColor, getMutedTextColor, getAccentTextColor } = useTextColors()
   const { theme } = useTheme()
 
+  // Check if user has admin permissions
+  const isAdmin = () => {
+    if (!user?.roles) return false
+    const roles = Array.isArray(user.roles) ? user.roles : user.roles.split(',').map((r: string) => r.trim())
+    return roles.some(role => 
+      role.toLowerCase().includes('admin') || 
+      role.toLowerCase().includes('president') || 
+      role.toLowerCase().includes('owner')
+    )
+  }
+
   // Get theme-aware card classes
   const getCardClasses = () => {
     switch (theme) {
@@ -466,24 +477,26 @@ export default function AnnouncementsPage() {
               {filteredAnnouncements.length} announcement{filteredAnnouncements.length !== 1 ? "s" : ""}
             </p>
           </div>
-          <div className="flex gap-2">
-            <Button
-              onClick={() => setIsManageChannelsDialogOpen(true)}
-              variant="outline"
-              size="sm"
-              className={`flex items-center gap-2 ${getButtonClasses("outline")}`}
-            >
-              <Settings className="h-4 w-4" />
-              Manage Channels
-            </Button>
-            <Button
-              onClick={() => setIsCreateDialogOpen(true)}
-              className="flex items-center gap-2"
-            >
-              <Plus className="h-4 w-4" />
-              New Announcement
-            </Button>
-          </div>
+          {isAdmin() && (
+            <div className="flex gap-2">
+              <Button
+                onClick={() => setIsManageChannelsDialogOpen(true)}
+                variant="outline"
+                size="sm"
+                className={`flex items-center gap-2 ${getButtonClasses("outline")}`}
+              >
+                <Settings className="h-4 w-4" />
+                Manage Channels
+              </Button>
+              <Button
+                onClick={() => setIsCreateDialogOpen(true)}
+                className="flex items-center gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                New Announcement
+              </Button>
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">

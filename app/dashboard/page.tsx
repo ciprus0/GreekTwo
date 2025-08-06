@@ -219,6 +219,12 @@ export default function DashboardPage() {
   const { getTextColor, getSecondaryTextColor, getMutedTextColor, getAccentTextColor } = useTextColors()
   const { theme } = useTheme()
 
+  // Check if a feature is enabled
+  const isFeatureEnabled = (featureName: string) => {
+    if (!organization?.features?.features) return true // Default to enabled if no features config
+    return organization.features.features[featureName] === true
+  }
+
   // Debounce task toggle to prevent rapid state changes
   const debouncedTaskToggle = useDebounce((taskId) => {
     const updatedTasks = tasks.map((task) => (task.id === taskId ? { ...task, completed: !task.completed } : task))
@@ -624,85 +630,107 @@ export default function DashboardPage() {
 
         {/* Hours Progress Cards */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 w-full">
-          <Card className={getCardClasses()}>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <div className="space-y-1">
-                <CardTitle className={`text-base md:text-lg font-medium ${getTextColor()}`}>Hours Progress</CardTitle>
-                <CardDescription className={`text-sm ${getSecondaryTextColor()}`}>
-                  Track your progress across all hour requirements
-                </CardDescription>
-              </div>
-              <Clock className="h-5 w-5 text-red-400 flex-shrink-0" />
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-4">
-                <MemoizedProgressCard
-                  title="Study Hours (This Week)"
-                  current={totalStudyHours}
-                  goal={studyHoursGoal}
-                  icon={<BookOpen className="h-4 w-4 text-indigo-400 flex-shrink-0" />}
-                  type="study"
-                />
+          {isFeatureEnabled('hours') ? (
+            <Card className={getCardClasses()}>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <div className="space-y-1">
+                  <CardTitle className={`text-base md:text-lg font-medium ${getTextColor()}`}>Hours Progress</CardTitle>
+                  <CardDescription className={`text-sm ${getSecondaryTextColor()}`}>
+                    Track your progress across all hour requirements
+                  </CardDescription>
+                </div>
+                <Clock className="h-5 w-5 text-red-400 flex-shrink-0" />
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-4">
+                  <MemoizedProgressCard
+                    title="Study Hours (This Week)"
+                    current={totalStudyHours}
+                    goal={studyHoursGoal}
+                    icon={<BookOpen className="h-4 w-4 text-indigo-400 flex-shrink-0" />}
+                    type="study"
+                  />
 
-                <MemoizedProgressCard
-                  title="Service Hours"
-                  current={serviceHours}
-                  goal={serviceHoursGoal}
-                  icon={<Users className="h-4 w-4 text-green-400 flex-shrink-0" />}
-                  type="service"
-                />
+                  <MemoizedProgressCard
+                    title="Service Hours"
+                    current={serviceHours}
+                    goal={serviceHoursGoal}
+                    icon={<Users className="h-4 w-4 text-green-400 flex-shrink-0" />}
+                    type="service"
+                  />
 
-                <MemoizedProgressCard
-                  title="Chapter Hours"
-                  current={chapterHours}
-                  goal={chapterHoursGoal}
-                  icon={<Calendar className="h-4 w-4 text-purple-400 flex-shrink-0" />}
-                  type="chapter"
-                />
-              </div>
-            </CardContent>
-            <CardFooter>
-              <Link
-                href="/dashboard/hours"
-                className={`text-xs ${getAccentTextColor()} hover:underline flex items-center transition-colors`}
-              >
-                View Details
-                <ChevronRight className="ml-1 h-3 w-3" />
-              </Link>
-            </CardFooter>
-          </Card>
+                  <MemoizedProgressCard
+                    title="Chapter Hours"
+                    current={chapterHours}
+                    goal={chapterHoursGoal}
+                    icon={<Calendar className="h-4 w-4 text-purple-400 flex-shrink-0" />}
+                    type="chapter"
+                  />
+                </div>
+              </CardContent>
+              <CardFooter>
+                <Link
+                  href="/dashboard/hours"
+                  className={`text-xs ${getAccentTextColor()} hover:underline flex items-center transition-colors`}
+                >
+                  View Details
+                  <ChevronRight className="ml-1 h-3 w-3" />
+                </Link>
+              </CardFooter>
+            </Card>
+          ) : (
+            <Card className={getCardClasses()}>
+              <CardContent className="flex items-center justify-center h-32">
+                <div className="text-center">
+                  <Clock className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                  <p className={`text-sm ${getSecondaryTextColor()}`}>Hours tracking is disabled</p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
-          <Card className={getCardClasses()}>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <div className="space-y-1">
-                <CardTitle className={`text-base md:text-lg font-medium ${getTextColor()}`}>Upcoming Events</CardTitle>
-                <CardDescription className={`text-sm ${getSecondaryTextColor()}`}>
-                  You have {events.length} events coming up
-                </CardDescription>
-              </div>
-              <Calendar className="h-4 w-4 text-red-400 flex-shrink-0" />
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {events.length > 0 ? (
-                  events.map((event, index) => (
-                    <MemoizedEventCard key={event.id || index} event={event} onClick={handleEventClick} theme={theme} />
-                  ))
-                ) : (
-                  <div className={`text-center py-2 text-sm ${getMutedTextColor()}`}>No upcoming events</div>
-                )}
-              </div>
-            </CardContent>
-            <CardFooter>
-              <Link
-                href="/dashboard/events"
-                className={`text-xs ${getAccentTextColor()} hover:underline flex items-center transition-colors`}
-              >
-                View All Events
-                <ChevronRight className="ml-1 h-3 w-3" />
-              </Link>
-            </CardFooter>
-          </Card>
+          {isFeatureEnabled('events') ? (
+            <Card className={getCardClasses()}>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <div className="space-y-1">
+                  <CardTitle className={`text-base md:text-lg font-medium ${getTextColor()}`}>Upcoming Events</CardTitle>
+                  <CardDescription className={`text-sm ${getSecondaryTextColor()}`}>
+                    You have {events.length} events coming up
+                  </CardDescription>
+                </div>
+                <Calendar className="h-4 w-4 text-red-400 flex-shrink-0" />
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {events.length > 0 ? (
+                    events.map((event, index) => (
+                      <MemoizedEventCard key={event.id || index} event={event} onClick={handleEventClick} theme={theme} />
+                    ))
+                  ) : (
+                    <div className={`text-center py-2 text-sm ${getMutedTextColor()}`}>No upcoming events</div>
+                  )}
+                </div>
+              </CardContent>
+              <CardFooter>
+                <Link
+                  href="/dashboard/events"
+                  className={`text-xs ${getAccentTextColor()} hover:underline flex items-center transition-colors`}
+                >
+                  View All Events
+                  <ChevronRight className="ml-1 h-3 w-3" />
+                </Link>
+              </CardFooter>
+            </Card>
+          ) : (
+            <Card className={getCardClasses()}>
+              <CardContent className="flex items-center justify-center h-32">
+                <div className="text-center">
+                  <Calendar className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                  <p className={`text-sm ${getSecondaryTextColor()}`}>Events are disabled</p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 md:gap-6 w-full">
@@ -734,23 +762,34 @@ export default function DashboardPage() {
               </div>
 
               <TabsContent value="announcements" className="mt-4">
-                <Card className={getCardClasses()}>
-                  <CardContent className="p-0">
-                    <div
-                      className={`divide-y ${theme === "original" ? "divide-gray-200" : theme === "light" ? "divide-blue-200/50" : "divide-white/10"}`}
-                    >
-                      {announcements.length > 0 ? (
-                        announcements
-                          .slice(0, 3)
-                          .map((announcement) => (
-                            <MemoizedAnnouncementCard key={announcement.id} announcement={announcement} theme={theme} />
-                          ))
-                      ) : (
-                        <div className={`p-8 text-center ${getMutedTextColor()}`}>No announcements yet</div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
+                {isFeatureEnabled('announcements') ? (
+                  <Card className={getCardClasses()}>
+                    <CardContent className="p-0">
+                      <div
+                        className={`divide-y ${theme === "original" ? "divide-gray-200" : theme === "light" ? "divide-blue-200/50" : "divide-white/10"}`}
+                      >
+                        {announcements.length > 0 ? (
+                          announcements
+                            .slice(0, 3)
+                            .map((announcement) => (
+                              <MemoizedAnnouncementCard key={announcement.id} announcement={announcement} theme={theme} />
+                            ))
+                        ) : (
+                          <div className={`p-8 text-center ${getMutedTextColor()}`}>No announcements yet</div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <Card className={getCardClasses()}>
+                    <CardContent className="flex items-center justify-center h-32">
+                      <div className="text-center">
+                        <Bell className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                        <p className={`text-sm ${getSecondaryTextColor()}`}>Announcements are disabled</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
               </TabsContent>
 
               <TabsContent value="recent-activity" className="mt-4">
@@ -834,50 +873,61 @@ export default function DashboardPage() {
           </div>
 
           <div className="space-y-4 md:space-y-6">
-            <Card className={getCardClasses()}>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className={`text-base md:text-lg ${getTextColor()}`}>Recent Messages</CardTitle>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className={`text-red-600 hover:text-red-700 text-xs md:text-sm`}
-                    asChild
+            {isFeatureEnabled('messages') ? (
+              <Card className={getCardClasses()}>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className={`text-base md:text-lg ${getTextColor()}`}>Recent Messages</CardTitle>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className={`text-red-600 hover:text-red-700 text-xs md:text-sm`}
+                      asChild
+                    >
+                      <Link href="/dashboard/messages">
+                        <MessageSquare className="h-4 w-4 mr-1 md:mr-2" />
+                        New
+                      </Link>
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <div
+                    className={`divide-y ${theme === "original" ? "divide-gray-200" : theme === "light" ? "divide-blue-200/50" : "divide-white/10"}`}
                   >
-                    <Link href="/dashboard/messages">
-                      <MessageSquare className="h-4 w-4 mr-1 md:mr-2" />
-                      New
-                    </Link>
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent className="p-0">
-                <div
-                  className={`divide-y ${theme === "original" ? "divide-gray-200" : theme === "light" ? "divide-blue-200/50" : "divide-white/10"}`}
+                    {recentMessages.length === 0 ? (
+                      <div className={`text-center py-8 ${getMutedTextColor()} text-sm`}>No messages yet</div>
+                    ) : (
+                      recentMessages.map((message) => (
+                        <MemoizedMessageCard
+                          key={message.id}
+                          message={message}
+                          onClick={handleMessageClick}
+                          formatTime={formatTime}
+                          theme={theme}
+                        />
+                      ))
+                    )}
+                  </div>
+                </CardContent>
+                <CardFooter
+                  className={`border-t ${theme === "original" ? "border-gray-200" : theme === "light" ? "border-blue-200/50" : "border-white/10"} p-4`}
                 >
-                  {recentMessages.length === 0 ? (
-                    <div className={`text-center py-8 ${getMutedTextColor()} text-sm`}>No messages yet</div>
-                  ) : (
-                    recentMessages.map((message) => (
-                      <MemoizedMessageCard
-                        key={message.id}
-                        message={message}
-                        onClick={handleMessageClick}
-                        formatTime={formatTime}
-                        theme={theme}
-                      />
-                    ))
-                  )}
-                </div>
-              </CardContent>
-              <CardFooter
-                className={`border-t ${theme === "original" ? "border-gray-200" : theme === "light" ? "border-blue-200/50" : "border-white/10"} p-4`}
-              >
-                <Button variant="outline" className={`w-full ${getButtonClasses()}`} asChild>
-                  <Link href="/dashboard/messages">View All Messages</Link>
-                </Button>
-              </CardFooter>
-            </Card>
+                  <Button variant="outline" className={`w-full ${getButtonClasses()}`} asChild>
+                    <Link href="/dashboard/messages">View All Messages</Link>
+                  </Button>
+                </CardFooter>
+              </Card>
+            ) : (
+              <Card className={getCardClasses()}>
+                <CardContent className="flex items-center justify-center h-32">
+                  <div className="text-center">
+                    <MessageSquare className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                    <p className={`text-sm ${getSecondaryTextColor()}`}>Messages are disabled</p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             <Card className={getCardClasses()}>
               <CardHeader>
