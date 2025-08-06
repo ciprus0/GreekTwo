@@ -1153,6 +1153,10 @@ function InviteMembersButton({ organization }) {
     }
   }
 
+  const handleCloseDialog = () => {
+    setShowInviteDialog(false)
+  }
+
   return (
     <>
       <DropdownMenu>
@@ -1199,7 +1203,7 @@ function InviteMembersButton({ organization }) {
       </DropdownMenu>
 
       {/* Invite Dialog */}
-      <Dialog open={showInviteDialog} onOpenChange={setShowInviteDialog}>
+      <Dialog open={showInviteDialog} onOpenChange={(open) => setShowInviteDialog(open)}>
         <DialogContent className={`${getCardClasses()} border-slate-700/50 max-w-md`}>
           <DialogHeader>
             <DialogTitle className={getTextColor()}>Invite Members</DialogTitle>
@@ -1232,7 +1236,7 @@ function InviteMembersButton({ organization }) {
           <DialogFooter>
             <Button
               variant="outline"
-              onClick={() => setShowInviteDialog(false)}
+              onClick={handleCloseDialog}
               className="bg-slate-700/50 border-slate-600/50 text-white hover:bg-slate-600/50"
             >
               Close
