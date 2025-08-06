@@ -328,17 +328,19 @@ export default function DashboardLayout({
   }
 
   const showFeature = (feature: string) => {
-    // Admin users can see everything except Chapter Settings (which has its own check)
-    if (isAdmin(user)) {
-      if (feature === "Chapter Settings") {
-        return true // Admins can see Chapter Settings
-      }
+    // Chapter Settings is ONLY for admins
+    if (feature === "Chapter Settings") {
+      return isAdmin(user)
+    }
+
+    // Dashboard is always visible
+    if (feature === "Dashboard") {
       return true
     }
 
-    // Chapter Settings is ONLY for admins
-    if (feature === "Chapter Settings") {
-      return false
+    // Settings is always visible
+    if (feature === "Settings") {
+      return true
     }
 
     // If user is only a New Member and pledge system is enabled
@@ -354,29 +356,7 @@ export default function DashboardLayout({
       return feature !== "Chapter Settings"
     }
 
-    // For all other users (Active, etc.), check organization features
-    if (user.roles?.includes("New Member") && user.roles?.length > 1) {
-      // User has New Member + other roles, treat as regular member
-      const featureMap = {
-        Events: "events",
-        Study: "study",
-        Tasks: "tasks",
-        Library: "library",
-        Messages: "messages",
-        Announcements: "announcements",
-        Members: "members",
-        Gym: "gym",
-        Polls: "polls",
-      }
-
-      const orgFeatureKey = featureMap[feature]
-      if (orgFeatureKey) {
-        return organization?.features?.features?.[orgFeatureKey] !== false
-      }
-      return true
-    }
-
-    // Regular members - check organization features
+    // Feature mapping for all users
     const featureMap = {
       Events: "events",
       Study: "study",
@@ -391,9 +371,11 @@ export default function DashboardLayout({
 
     const orgFeatureKey = featureMap[feature]
     if (orgFeatureKey) {
-      return organization?.features?.features?.[orgFeatureKey] !== false
+      // Check if the feature is explicitly enabled in the organization settings
+      return organization?.features?.features?.[orgFeatureKey] === true
     }
 
+    // Default to true for unmapped features
     return true
   }
 
