@@ -264,8 +264,10 @@ export default function DashboardLayout({
 
   useEffect(() => {
     const loadOrganization = async () => {
-      if (user?.organizationId) {
-        const org = await api.getOrganizationById(user.organizationId)
+      // Get organization ID from user metadata (like mobile app)
+      const organizationId = user?.user_metadata?.organization_id || user?.organizationId
+      if (organizationId) {
+        const org = await api.getOrganizationById(organizationId)
         setOrganization(org)
       }
     }
@@ -322,7 +324,7 @@ export default function DashboardLayout({
 
   // Check if pledge system is enabled
   const isPledgeSystemEnabled = () => {
-    return organization?.features?.pledgeSystem === true
+    return organization?.features?.features?.pledgeSystem === true
   }
 
   const showFeature = (feature: string) => {
@@ -364,11 +366,12 @@ export default function DashboardLayout({
         Announcements: "announcements",
         Members: "members",
         Gym: "gym",
+        Polls: "polls",
       }
 
       const orgFeatureKey = featureMap[feature]
       if (orgFeatureKey) {
-        return organization?.features?.[orgFeatureKey] !== false
+        return organization?.features?.features?.[orgFeatureKey] !== false
       }
       return true
     }
@@ -383,11 +386,12 @@ export default function DashboardLayout({
       Announcements: "announcements",
       Members: "members",
       Gym: "gym",
+      Polls: "polls",
     }
 
     const orgFeatureKey = featureMap[feature]
     if (orgFeatureKey) {
-      return organization?.features?.[orgFeatureKey] !== false
+      return organization?.features?.features?.[orgFeatureKey] !== false
     }
 
     return true
