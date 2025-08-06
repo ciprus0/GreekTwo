@@ -83,10 +83,62 @@ export function useTextColors() {
     }
   }
 
+  const getCardClasses = () => {
+    switch (theme) {
+      case "original":
+        return "bg-white border border-gray-200 shadow-sm"
+      case "light":
+        return "bg-white/80 backdrop-blur-sm border border-gray-200 shadow-sm"
+      case "dark":
+      default:
+        return "bg-slate-700 border border-slate-600 shadow-lg"
+    }
+  }
+
+  const getButtonClasses = () => {
+    switch (theme) {
+      case "original":
+        return "bg-amber-600 hover:bg-amber-700 text-white"
+      case "light":
+        return "bg-sky-600 hover:bg-sky-700 text-white"
+      case "dark":
+      default:
+        return "bg-red-600 hover:bg-red-700 text-white"
+    }
+  }
+
+  const getInputClasses = () => {
+    switch (theme) {
+      case "original":
+        return "bg-white border border-gray-300 text-gray-900 placeholder-gray-500"
+      case "light":
+        return "bg-white/80 backdrop-blur-sm border border-gray-300 text-gray-900 placeholder-gray-500"
+      case "dark":
+      default:
+        return "bg-slate-600 border border-slate-500 text-white placeholder-slate-400"
+    }
+  }
+
+  const getDialogClasses = () => {
+    switch (theme) {
+      case "original":
+        return "bg-white border border-gray-200"
+      case "light":
+        return "bg-white/95 backdrop-blur-md border border-gray-200"
+      case "dark":
+      default:
+        return "bg-slate-700 border border-slate-600"
+    }
+  }
+
   return {
     getTextColor,
     getSecondaryTextColor,
     getMutedTextColor,
     getAccentTextColor,
+    getCardClasses,
+    getButtonClasses,
+    getInputClasses,
+    getDialogClasses,
   }
 }
