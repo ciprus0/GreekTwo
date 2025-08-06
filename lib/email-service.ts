@@ -105,7 +105,7 @@ class EmailService {
    * @param subject - Email subject
    * @param html - Email HTML content
    */
-  private async sendEmail(to: string, subject: string, html: string) {
+  async sendEmail(to: string, subject: string, html: string) {
     try {
       const mailOptions = {
         from: 'GreekOneApp@gmail.com',
