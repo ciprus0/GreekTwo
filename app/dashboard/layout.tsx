@@ -346,7 +346,7 @@ export default function DashboardLayout({
     // If user is only a New Member and pledge system is enabled
     if (isOnlyNewMember(user) && isPledgeSystemEnabled()) {
       // New members with pledge system can only see these features
-      const allowedFeatures = ["Dashboard", "Study", "Hours", "Tasks", "Announcements", "Settings"]
+      const allowedFeatures = ["Dashboard", "Study", "Tasks", "Announcements", "Settings"]
       return allowedFeatures.includes(feature)
     }
 
@@ -367,6 +367,7 @@ export default function DashboardLayout({
       Members: "members",
       Gym: "gym",
       Polls: "polls",
+      Hours: "hours",
     }
 
     const orgFeatureKey = featureMap[feature]
