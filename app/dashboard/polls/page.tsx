@@ -68,14 +68,14 @@ export default function PollsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-800 flex items-center justify-center p-4">
-        <div className="text-white">Loading polls and elections...</div>
+      <div className={`min-h-screen ${theme === 'dark' ? 'bg-slate-800' : theme === 'light' ? 'bg-gradient-to-br from-blue-50 via-white to-blue-50' : 'bg-white'} flex items-center justify-center p-4`}>
+        <div className={getTextColor()}>Loading polls and elections...</div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-slate-800 p-6">
+    <div className={`min-h-screen p-6 ${theme === 'dark' ? 'bg-slate-800' : theme === 'light' ? 'bg-gradient-to-br from-blue-50 via-white to-blue-50' : 'bg-white'}`}>
       <div className="max-w-7xl mx-auto">
         <div className="flex items-center justify-between mb-8">
           <div>
@@ -85,20 +85,14 @@ export default function PollsPage() {
           {isAdmin() && (
             <div className="flex gap-2">
               <Button 
-                onClick={() => toast({
-                  title: "Coming Soon",
-                  description: "Poll creation will be available soon",
-                })}
+                onClick={() => router.push('/dashboard/polls/create')}
                 className={getButtonClasses()}
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Create Poll
               </Button>
               <Button 
-                onClick={() => toast({
-                  title: "Coming Soon",
-                  description: "Election creation will be available soon",
-                })}
+                onClick={() => router.push('/dashboard/polls/create-election')}
                 className={getButtonClasses()}
               >
                 <Plus className="h-4 w-4 mr-2" />

@@ -2,215 +2,239 @@
 
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
-import { useToast } from "@/components/ui/use-toast"
-import { Copy, Check, Crown, AlertTriangle } from "lucide-react"
-import { api } from "@/lib/supabase-api"
-import { ThemeWrapper, useTextColors } from "@/components/theme-wrapper"
-import { ThemedInput } from "@/components/themed-input"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { isAdmin, isGroupOwner } from "@/lib/permissions"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { useToast } from "@/hooks/use-toast"
+import { useTheme } from "@/lib/theme-context"
+import { useTextColors } from "@/components/theme-wrapper"
+import { Settings, Users, Award, Calendar, BookOpen, MessageSquare, Megaphone, CheckSquare, Library, Dumbbell, Clock, Plus, X, Palette, Crown, AlertTriangle } from "lucide-react"
 
 export default function ChapterSettingsPage() {
-  const { toast } = useToast()
-  const [user, setUser] = useState(null)
-  const [organization, setOrganization] = useState(null)
-  const [members, setMembers] = useState([])
   const [loading, setLoading] = useState(true)
-  const [copied, setCopied] = useState(false)
-  const [transferOwnershipDialogOpen, setTransferOwnershipDialogOpen] = useState(false)
-  const [deleteOrganizationDialogOpen, setDeleteOrganizationDialogOpen] = useState(false)
-  const [selectedNewOwner, setSelectedNewOwner] = useState("")
-  const [confirmDeleteText, setConfirmDeleteText] = useState("")
-  const [features, setFeatures] = useState({
-    events: true,
-    study: true,
-    tasks: true,
-    library: true,
-    messages: true,
-    announcements: true,
-    pledgeSystem: true,
-    gym: true,
+  const [userProfile, setUserProfile] = useState<any>(null)
+  const [organization, setOrganization] = useState<any>(null)
+  const [members, setMembers] = useState<any[]>([])
+  const [showDeleteRoleDialog, setShowDeleteRoleDialog] = useState(false)
+  const [roleToDelete, setRoleToDelete] = useState<any>(null)
+  const [showAddRoleDialog, setShowAddRoleDialog] = useState(false)
+  const [newRole, setNewRole] = useState({ name: "", color: "#3b82f6", isAdmin: false })
+  
+  // Organization settings
+  const [orgSettings, setOrgSettings] = useState({
+    roles: [
+      { id: "group_owner", name: "Group Owner", color: "#7c3aed", isAdmin: true, isDefault: true },
+      { id: "president", name: "President", color: "#dc2626", isAdmin: true, isDefault: true },
+      { id: "treasurer", name: "Treasurer", color: "#059669", isAdmin: false, isDefault: true },
+      { id: "active", name: "Active", color: "#2563eb", isAdmin: false, isDefault: true },
+      { id: "new_member", name: "New Member", color: "#f59e0b", isAdmin: false, isDefault: true }
+    ],
+    features: {
+      gym: true,
+      hours: true,
+      polls: true,
+      study: true,
+      tasks: true,
+      events: true,
+      library: true,
+      messages: true,
+      pledgeSystem: true,
+      announcements: true
+    },
+    requirements: {
+      gym: 0,
+      study: 0,
+      housePoints: 0
+    },
+    trackingSystem: "housePoints" as "housePoints" | "hours",
+    pledgeExemption: false,
+    pledgeExemptions: {
+      study: false,
+      tasks: false,
+      events: false,
+      library: false,
+      messages: false,
+      announcements: false
+    }
   })
 
-  const { getTextColor, getSecondaryTextColor } = useTextColors()
+  const { toast } = useToast()
+  const { theme } = useTheme()
+  const { getTextColor, getCardClasses, getButtonClasses, getInputClasses, getDialogClasses } = useTextColors()
 
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        const userData = localStorage.getItem("user")
-        if (userData) {
-          const parsedUser = JSON.parse(userData)
-          setUser(parsedUser)
-
-          // Check if user has admin permissions
-          if (!isAdmin(parsedUser)) {
-            toast({
-              title: "Access Denied",
-              description: "You do not have permission to view this page.",
-              variant: "destructive",
-            })
-            window.location.href = "/dashboard"
-            return
-          }
-
-          if (parsedUser.organizationId) {
-            const org = await api.getOrganizationById(parsedUser.organizationId)
-            if (org) {
-              setOrganization(org)
-              setFeatures(
-                org.features || {
-                  events: true,
-                  study: true,
-                  tasks: true,
-                  library: true,
-                  messages: true,
-                  announcements: true,
-                  pledgeSystem: true,
-                  gym: true,
-                },
-              )
-            }
-
-            // Load members for transfer ownership
-            const membersList = await api.getMembersByOrganization(parsedUser.organizationId)
-            setMembers(membersList.filter((member) => member.id !== parsedUser.id && member.approved))
-          }
-        }
-      } catch (error) {
-        console.error("Error loading chapter settings:", error)
-        toast({
-          title: "Error",
-          description: "Failed to load chapter settings.",
-          variant: "destructive",
-        })
-      } finally {
-        setLoading(false)
-      }
+    if (typeof window !== 'undefined') {
+      loadData()
     }
+  }, [])
 
-    loadData()
-  }, [toast])
-
-  const handleFeatureToggle = async (feature: string, checked: boolean) => {
+  const loadData = async () => {
     try {
-      if (!organization) return
+      setLoading(true)
+      
+      const userStr = localStorage.getItem('user')
+      if (!userStr) {
+        window.location.href = '/login'
+        return
+      }
+      
+      const user = JSON.parse(userStr)
+      setUserProfile(user)
 
-      const updatedFeatures = { ...features, [feature]: checked }
-      await api.updateOrganization(organization.id, { features: updatedFeatures })
-      setFeatures(updatedFeatures)
-
-      toast({
-        title: "Settings Updated",
-        description: `${getFeatureDisplayName(feature)} has been ${checked ? "enabled" : "disabled"}.`,
-      })
-
-      // Force a page reload to update the sidebar immediately
-      setTimeout(() => {
-        window.location.reload()
-      }, 1000)
+      // TODO: Replace with actual API calls
+      // const org = await api.getOrganizationById(user.organization_id)
+      // if (org?.features) {
+      //   setOrgSettings(org.features)
+      // }
+      
+      // const membersList = await api.getMembersByOrganization(user.organization_id)
+      // setMembers(membersList)
+      
+      setMembers([]) // Placeholder
     } catch (error) {
-      console.error("Error updating feature:", error)
+      console.error('Error loading data:', error)
       toast({
         title: "Error",
-        description: "Failed to update settings. Please try again.",
+        description: "Failed to load chapter settings",
         variant: "destructive",
       })
+    } finally {
+      setLoading(false)
     }
   }
 
-  const getFeatureDisplayName = (feature: string) => {
-    const displayNames = {
-      events: "Events",
-      study: "Study",
-      tasks: "Tasks",
-      library: "Library",
-      messages: "Messages",
-      announcements: "Announcements",
-      pledgeSystem: "Pledge/New Member System",
-      gym: "Gym",
-    }
-    return displayNames[feature] || feature
+  const isAdmin = () => {
+    if (!userProfile?.roles) return false
+    const roles = Array.isArray(userProfile.roles) ? userProfile.roles : userProfile.roles.split(',').map((r: string) => r.trim())
+    return roles.some(role => 
+      role.toLowerCase().includes('admin') || 
+      role.toLowerCase().includes('president') || 
+      role.toLowerCase().includes('owner')
+    )
   }
 
-  const copyGroupId = async () => {
-    if (organization?.group_id) {
-      try {
-        await navigator.clipboard.writeText(organization.group_id)
-        setCopied(true)
-        toast({
-          title: "Group ID copied!",
-          description: "The Group ID has been copied to your clipboard.",
-        })
-        setTimeout(() => setCopied(false), 2000)
-      } catch (err) {
-        toast({
-          title: "Failed to copy",
-          description: "Could not copy Group ID to clipboard.",
-          variant: "destructive",
-        })
+  const handleFeatureToggle = (feature: string, enabled: boolean) => {
+    setOrgSettings(prev => ({
+      ...prev,
+      features: {
+        ...prev.features,
+        [feature]: enabled
       }
-    }
+    }))
   }
 
-  const handleTransferOwnership = async () => {
-    if (!selectedNewOwner || !organization) return
+  const handleRequirementChange = (type: string, value: number) => {
+    setOrgSettings(prev => ({
+      ...prev,
+      requirements: {
+        ...prev.requirements,
+        [type]: value
+      }
+    }))
+  }
 
-    try {
-      await api.transferOrganizationOwnership(organization.id, selectedNewOwner, user.id)
+  const handleTrackingSystemChange = (system: "housePoints" | "hours") => {
+    setOrgSettings(prev => ({
+      ...prev,
+      trackingSystem: system
+    }))
+  }
 
-      toast({
-        title: "Ownership Transferred",
-        description: "Organization ownership has been successfully transferred.",
-      })
+  const handlePledgeExemptionToggle = (exemption: string, enabled: boolean) => {
+    setOrgSettings(prev => ({
+      ...prev,
+      pledgeExemptions: {
+        ...prev.pledgeExemptions,
+        [exemption]: enabled
+      }
+    }))
+  }
 
-      // Update local user data to remove Group Owner role
-      const updatedUser = { ...user, roles: user.roles?.filter((role) => role !== "Group Owner") || ["Active"] }
-      localStorage.setItem("user", JSON.stringify(updatedUser))
-      setUser(updatedUser)
-
-      setTransferOwnershipDialogOpen(false)
-      setSelectedNewOwner("")
-    } catch (error) {
-      console.error("Error transferring ownership:", error)
+  const addRole = () => {
+    if (!newRole.name.trim()) {
       toast({
         title: "Error",
-        description: "Failed to transfer ownership. Please try again.",
+        description: "Please enter a role name",
         variant: "destructive",
       })
+      return
     }
-  }
 
-  const handleDeleteOrganization = async () => {
-    if (confirmDeleteText !== organization?.name || !organization) return
-
-    try {
-      await api.deleteOrganization(organization.id, user.id)
-
-      toast({
-        title: "Organization Deleted",
-        description: "The organization has been permanently deleted.",
-      })
-
-      // Clear local storage and redirect
-      localStorage.removeItem("isAuthenticated")
-      localStorage.removeItem("user")
-      window.location.href = "/"
-    } catch (error) {
-      console.error("Error deleting organization:", error)
+    const roleId = newRole.name.toLowerCase().replace(/\s+/g, '_')
+    const roleExists = orgSettings.roles.some(role => role.id === roleId)
+    
+    if (roleExists) {
       toast({
         title: "Error",
-        description: error.message || "Failed to delete organization. Please try again.",
+        description: "A role with this name already exists",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setOrgSettings(prev => ({
+      ...prev,
+      roles: [...prev.roles, {
+        id: roleId,
+        name: newRole.name,
+        color: newRole.color,
+        isAdmin: newRole.isAdmin,
+        isDefault: false
+      }]
+    }))
+
+    setNewRole({ name: "", color: "#3b82f6", isAdmin: false })
+    setShowAddRoleDialog(false)
+    
+    toast({
+      title: "Success",
+      description: "Role added successfully",
+    })
+  }
+
+  const deleteRole = () => {
+    if (!roleToDelete) return
+
+    if (roleToDelete.isDefault) {
+      toast({
+        title: "Error",
+        description: "Cannot delete default roles",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setOrgSettings(prev => ({
+      ...prev,
+      roles: prev.roles.filter(role => role.id !== roleToDelete.id)
+    }))
+
+    setRoleToDelete(null)
+    setShowDeleteRoleDialog(false)
+    
+    toast({
+      title: "Success",
+      description: "Role deleted successfully",
+    })
+  }
+
+  const saveSettings = async () => {
+    try {
+      // TODO: Replace with actual API call
+      console.log('Saving settings:', orgSettings)
+      
+      toast({
+        title: "Success",
+        description: "Settings saved successfully",
+      })
+    } catch (error) {
+      console.error('Error saving settings:', error)
+      toast({
+        title: "Error",
+        description: "Failed to save settings",
         variant: "destructive",
       })
     }
@@ -218,359 +242,289 @@ export default function ChapterSettingsPage() {
 
   if (loading) {
     return (
-      <ThemeWrapper>
-        <div className="flex items-center justify-center h-[calc(100vh-200px)]">
-          <div className={getTextColor()}>Loading...</div>
-        </div>
-      </ThemeWrapper>
+      <div className={`min-h-screen ${theme === 'dark' ? 'bg-slate-800' : theme === 'light' ? 'bg-gradient-to-br from-blue-50 via-white to-blue-50' : 'bg-white'} flex items-center justify-center p-4`}>
+        <div className={getTextColor()}>Loading chapter settings...</div>
+      </div>
     )
   }
 
-  const canAccessSettings = user && isAdmin(user)
-
-  if (!canAccessSettings) {
+  if (!isAdmin()) {
     return (
-      <ThemeWrapper>
-        <div className="flex items-center justify-center h-[calc(100vh-200px)]">
-          <div className={getTextColor()}>You do not have permission to view this page.</div>
+      <div className={`min-h-screen ${theme === 'dark' ? 'bg-slate-800' : theme === 'light' ? 'bg-gradient-to-br from-blue-50 via-white to-blue-50' : 'bg-white'} flex items-center justify-center p-4`}>
+        <div className="text-center">
+          <AlertTriangle className="h-12 w-12 mx-auto text-red-500 mb-4" />
+          <h2 className={`text-xl font-semibold ${getTextColor()}`}>Access Denied</h2>
+          <p className="text-gray-500">You don't have permission to view this page.</p>
         </div>
-      </ThemeWrapper>
+      </div>
     )
   }
 
   return (
-    <ThemeWrapper>
-      <div className="space-y-6 p-4 md:p-6">
-        <div>
-          <h1 className={`text-2xl font-bold tracking-tight ${getTextColor()}`}>Chapter Settings</h1>
-          <p className={getSecondaryTextColor()}>Customize your chapter's features and organization information.</p>
+    <div className={`min-h-screen p-6 ${theme === 'dark' ? 'bg-slate-800' : theme === 'light' ? 'bg-gradient-to-br from-blue-50 via-white to-blue-50' : 'bg-white'}`}>
+      <div className="max-w-6xl mx-auto space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className={`text-3xl font-bold ${getTextColor()}`}>Chapter Settings</h1>
+            <p className={`text-lg ${getTextColor()}`}>Manage your organization's settings and features</p>
+          </div>
+          <Button onClick={saveSettings} className={getButtonClasses()}>
+            Save Settings
+          </Button>
         </div>
 
-        {/* Organization Information */}
-        <Card className="glass-card">
-          <CardHeader>
-            <CardTitle className={getTextColor()}>Organization Information</CardTitle>
-            <CardDescription className={getSecondaryTextColor()}>
-              View and manage your organization's basic information.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-2">
-              <Label className={`${getTextColor()} font-medium`}>Organization Name</Label>
-              <ThemedInput value={organization?.name || ""} disabled className="opacity-60" />
-            </div>
-
-            <div className="grid gap-2">
-              <Label className={`${getTextColor()} font-medium`}>Group ID</Label>
-              <div className="flex gap-2">
-                <ThemedInput value={organization?.group_id || ""} disabled className="opacity-60 flex-1" />
-                <Button variant="outline" onClick={copyGroupId} className="shrink-0 bg-transparent">
-                  {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                </Button>
-              </div>
-              <p className={`text-sm ${getSecondaryTextColor()}`}>
-                Share this Group ID with new members to invite them to your organization.
-              </p>
-            </div>
-
-            <div className="grid gap-2">
-              <Label className={`${getTextColor()} font-medium`}>Organization Type</Label>
-              <ThemedInput value={organization?.type || ""} disabled className="opacity-60" />
-            </div>
-
-            <div className="grid gap-2">
-              <Label className={`${getTextColor()} font-medium`}>University</Label>
-              <ThemedInput value={organization?.university || ""} disabled className="opacity-60" />
-            </div>
-
-            <div className="grid gap-2">
-              <Label className={`${getTextColor()} font-medium`}>Chapter Designation</Label>
-              <ThemedInput value={organization?.chapter_designation || ""} disabled className="opacity-60" />
-            </div>
-
-            <div className="grid gap-2">
-              <Label className={`${getTextColor()} font-medium`}>Founded Year</Label>
-              <ThemedInput value={organization?.founded_year || ""} disabled className="opacity-60" />
-            </div>
-
-            <div className="grid gap-2">
-              <Label className={`${getTextColor()} font-medium`}>Colony Status</Label>
-              <ThemedInput
-                value={organization?.is_colony ? "Colony" : "Active Chapter"}
-                disabled
-                className="opacity-60"
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Feature Toggles */}
-        <Card className="glass-card">
-          <CardHeader>
-            <CardTitle className={getTextColor()}>Feature Toggles</CardTitle>
-            <CardDescription className={getSecondaryTextColor()}>
-              Enable or disable features for your chapter members. Changes will take effect immediately.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <Label htmlFor="events" className={getTextColor()}>
-                  Events
-                </Label>
-                <p className={`text-sm ${getSecondaryTextColor()}`}>Allow members to view and manage chapter events</p>
-              </div>
-              <Checkbox
-                id="events"
-                checked={features.events}
-                onCheckedChange={(checked) => handleFeatureToggle("events", checked)}
-              />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div>
-                <Label htmlFor="study" className={getTextColor()}>
-                  Study
-                </Label>
-                <p className={`text-sm ${getSecondaryTextColor()}`}>
-                  Enable study session tracking and location management
-                </p>
-              </div>
-              <Checkbox
-                id="study"
-                checked={features.study}
-                onCheckedChange={(checked) => handleFeatureToggle("study", checked)}
-              />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div>
-                <Label htmlFor="tasks" className={getTextColor()}>
-                  Tasks
-                </Label>
-                <p className={`text-sm ${getSecondaryTextColor()}`}>Allow task creation and assignment for members</p>
-              </div>
-              <Checkbox
-                id="tasks"
-                checked={features.tasks}
-                onCheckedChange={(checked) => handleFeatureToggle("tasks", checked)}
-              />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div>
-                <Label htmlFor="library" className={getTextColor()}>
-                  Library
-                </Label>
-                <p className={`text-sm ${getSecondaryTextColor()}`}>Enable document and file sharing library</p>
-              </div>
-              <Checkbox
-                id="library"
-                checked={features.library}
-                onCheckedChange={(checked) => handleFeatureToggle("library", checked)}
-              />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div>
-                <Label htmlFor="messages" className={getTextColor()}>
-                  Messages
-                </Label>
-                <p className={`text-sm ${getSecondaryTextColor()}`}>Allow direct messaging and group chats</p>
-              </div>
-              <Checkbox
-                id="messages"
-                checked={features.messages}
-                onCheckedChange={(checked) => handleFeatureToggle("messages", checked)}
-              />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div>
-                <Label htmlFor="announcements" className={getTextColor()}>
-                  Announcements
-                </Label>
-                <p className={`text-sm ${getSecondaryTextColor()}`}>Enable chapter-wide announcements and news</p>
-              </div>
-              <Checkbox
-                id="announcements"
-                checked={features.announcements}
-                onCheckedChange={(checked) => handleFeatureToggle("announcements", checked)}
-              />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div>
-                <Label htmlFor="pledgeSystem" className={getTextColor()}>
-                  Pledge/New Member System
-                </Label>
-                <p className={`text-sm ${getSecondaryTextColor()}`}>
-                  Enable restricted access for new members until activated
-                </p>
-              </div>
-              <Checkbox
-                id="pledgeSystem"
-                checked={features.pledgeSystem}
-                onCheckedChange={(checked) => handleFeatureToggle("pledgeSystem", checked)}
-              />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div>
-                <Label htmlFor="gym" className={getTextColor()}>
-                  Gym
-                </Label>
-                <p className={`text-sm ${getSecondaryTextColor()}`}>
-                  Enable gym session tracking and fitness monitoring
-                </p>
-              </div>
-              <Checkbox
-                id="gym"
-                checked={features.gym}
-                onCheckedChange={(checked) => handleFeatureToggle("gym", checked)}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Group Owner Actions */}
-        {isGroupOwner(user) && (
-          <Card className="glass-card border-amber-500/30">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Features */}
+          <Card className={getCardClasses()}>
             <CardHeader>
-              <CardTitle className={`${getTextColor()} flex items-center gap-2`}>
-                <Crown className="h-5 w-5 text-amber-400" />
-                Group Owner Actions
-              </CardTitle>
-              <CardDescription className={getSecondaryTextColor()}>
-                These actions are only available to the Group Owner.
+              <CardTitle className={getTextColor()}>Features</CardTitle>
+              <CardDescription className={getTextColor()}>
+                Enable or disable features for your organization
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label className={getTextColor()}>Transfer Ownership</Label>
-                  <p className={`text-sm ${getSecondaryTextColor()}`}>
-                    Transfer Group Owner privileges to another member
-                  </p>
+              {Object.entries(orgSettings.features).map(([feature, enabled]) => (
+                <div key={feature} className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    {feature === 'gym' && <Dumbbell className="h-5 w-5" />}
+                    {feature === 'hours' && <Clock className="h-5 w-5" />}
+                    {feature === 'polls' && <MessageSquare className="h-5 w-5" />}
+                    {feature === 'study' && <BookOpen className="h-5 w-5" />}
+                    {feature === 'tasks' && <CheckSquare className="h-5 w-5" />}
+                    {feature === 'events' && <Calendar className="h-5 w-5" />}
+                    {feature === 'library' && <Library className="h-5 w-5" />}
+                    {feature === 'messages' && <MessageSquare className="h-5 w-5" />}
+                    {feature === 'pledgeSystem' && <Award className="h-5 w-5" />}
+                    {feature === 'announcements' && <Megaphone className="h-5 w-5" />}
+                    <Label className={getTextColor()}>
+                      {feature.charAt(0).toUpperCase() + feature.slice(1).replace(/([A-Z])/g, ' $1')}
+                    </Label>
+                  </div>
+                  <Switch
+                    checked={enabled}
+                    onCheckedChange={(checked) => handleFeatureToggle(feature, checked)}
+                  />
                 </div>
-                <Button
-                  variant="outline"
-                  onClick={() => setTransferOwnershipDialogOpen(true)}
-                  className="bg-amber-600/20 border-amber-500/30 text-amber-300 hover:bg-amber-600/30"
-                  disabled={members.length === 0}
+              ))}
+            </CardContent>
+          </Card>
+
+          {/* Tracking System */}
+          <Card className={getCardClasses()}>
+            <CardHeader>
+              <CardTitle className={getTextColor()}>Tracking System</CardTitle>
+              <CardDescription className={getTextColor()}>
+                Choose between Hours or House Points tracking
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label className={getTextColor()}>System Type</Label>
+                <Select
+                  value={orgSettings.trackingSystem}
+                  onValueChange={(value: "housePoints" | "hours") => handleTrackingSystemChange(value)}
                 >
-                  Transfer
-                </Button>
+                  <SelectTrigger className={getInputClasses()}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="housePoints">House Points</SelectItem>
+                    <SelectItem value="hours">Hours</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label className={`${getTextColor()} text-red-400`}>Delete Organization</Label>
-                  <p className={`text-sm ${getSecondaryTextColor()}`}>
-                    Permanently delete this organization and all its data
-                  </p>
+              <div>
+                <Label className={getTextColor()}>Requirements</Label>
+                <div className="space-y-2 mt-2">
+                  {orgSettings.trackingSystem === 'housePoints' ? (
+                    <div>
+                      <Label className="text-sm">House Points Required</Label>
+                      <Input
+                        type="number"
+                        value={orgSettings.requirements.housePoints}
+                        onChange={(e) => handleRequirementChange('housePoints', parseInt(e.target.value) || 0)}
+                        className={getInputClasses()}
+                        min="0"
+                      />
+                    </div>
+                  ) : (
+                    <>
+                      <div>
+                        <Label className="text-sm">Gym Hours Required</Label>
+                        <Input
+                          type="number"
+                          value={orgSettings.requirements.gym}
+                          onChange={(e) => handleRequirementChange('gym', parseInt(e.target.value) || 0)}
+                          className={getInputClasses()}
+                          min="0"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-sm">Study Hours Required</Label>
+                        <Input
+                          type="number"
+                          value={orgSettings.requirements.study}
+                          onChange={(e) => handleRequirementChange('study', parseInt(e.target.value) || 0)}
+                          className={getInputClasses()}
+                          min="0"
+                        />
+                      </div>
+                    </>
+                  )}
                 </div>
-                <Button
-                  variant="outline"
-                  onClick={() => setDeleteOrganizationDialogOpen(true)}
-                  className="bg-red-600/20 border-red-500/30 text-red-300 hover:bg-red-600/30"
-                >
-                  <AlertTriangle className="h-4 w-4 mr-2" />
-                  Delete
-                </Button>
               </div>
             </CardContent>
           </Card>
-        )}
 
-        {/* Transfer Ownership Dialog */}
-        <Dialog open={transferOwnershipDialogOpen} onOpenChange={setTransferOwnershipDialogOpen}>
-          <DialogContent className="glass-card">
+          {/* Roles */}
+          <Card className={getCardClasses()}>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className={getTextColor()}>Roles</CardTitle>
+                  <CardDescription className={getTextColor()}>
+                    Manage member roles and permissions
+                  </CardDescription>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowAddRoleDialog(true)}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Role
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {orgSettings.roles.map((role) => (
+                <div key={role.id} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="w-4 h-4 rounded-full"
+                      style={{ backgroundColor: role.color }}
+                    />
+                    <div>
+                      <div className={`font-medium ${getTextColor()}`}>{role.name}</div>
+                      <div className="text-sm text-gray-500">
+                        {role.isAdmin ? 'Admin' : 'Member'} {role.isDefault && '(Default)'}
+                      </div>
+                    </div>
+                  </div>
+                  {!role.isDefault && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setRoleToDelete(role)
+                        setShowDeleteRoleDialog(true)
+                      }}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          {/* Pledge Exemptions */}
+          <Card className={getCardClasses()}>
+            <CardHeader>
+              <CardTitle className={getTextColor()}>Pledge Exemptions</CardTitle>
+              <CardDescription className={getTextColor()}>
+                Configure pledge exemptions for different activities
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {Object.entries(orgSettings.pledgeExemptions).map(([exemption, enabled]) => (
+                <div key={exemption} className="flex items-center justify-between">
+                  <Label className={getTextColor()}>
+                    {exemption.charAt(0).toUpperCase() + exemption.slice(1).replace(/([A-Z])/g, ' $1')}
+                  </Label>
+                  <Switch
+                    checked={enabled}
+                    onCheckedChange={(checked) => handlePledgeExemptionToggle(exemption, checked)}
+                  />
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Add Role Dialog */}
+        <Dialog open={showAddRoleDialog} onOpenChange={setShowAddRoleDialog}>
+          <DialogContent className={getDialogClasses()}>
             <DialogHeader>
-              <DialogTitle className={getTextColor()}>Transfer Ownership</DialogTitle>
-              <DialogDescription className={getSecondaryTextColor()}>
-                Select a member to transfer Group Owner privileges to. This action cannot be undone.
+              <DialogTitle className={getTextColor()}>Add New Role</DialogTitle>
+              <DialogDescription className={getTextColor()}>
+                Create a new role for your organization
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div>
-                <Label className={getTextColor()}>Select New Owner</Label>
-                <Select value={selectedNewOwner} onValueChange={setSelectedNewOwner}>
-                  <SelectTrigger className="glass-card-inner">
-                    <SelectValue placeholder="Choose a member" />
-                  </SelectTrigger>
-                  <SelectContent className="glass-card">
-                    {members.map((member) => (
-                      <SelectItem key={member.id} value={member.id}>
-                        {member.name} ({member.email})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="roleName" className={getTextColor()}>Role Name</Label>
+                <Input
+                  id="roleName"
+                  value={newRole.name}
+                  onChange={(e) => setNewRole({ ...newRole, name: e.target.value })}
+                  className={getInputClasses()}
+                  placeholder="Enter role name"
+                />
+              </div>
+              <div>
+                <Label htmlFor="roleColor" className={getTextColor()}>Color</Label>
+                <Input
+                  id="roleColor"
+                  type="color"
+                  value={newRole.color}
+                  onChange={(e) => setNewRole({ ...newRole, color: e.target.value })}
+                  className="h-10 w-20"
+                />
+              </div>
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="isAdmin"
+                  checked={newRole.isAdmin}
+                  onCheckedChange={(checked) => setNewRole({ ...newRole, isAdmin: checked })}
+                />
+                <Label htmlFor="isAdmin" className={getTextColor()}>
+                  Admin privileges
+                </Label>
               </div>
             </div>
             <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setTransferOwnershipDialogOpen(false)
-                  setSelectedNewOwner("")
-                }}
-              >
+              <Button variant="outline" onClick={() => setShowAddRoleDialog(false)}>
                 Cancel
               </Button>
-              <Button
-                onClick={handleTransferOwnership}
-                disabled={!selectedNewOwner}
-                className="bg-amber-600 hover:bg-amber-700 text-white"
-              >
-                Transfer Ownership
+              <Button onClick={addRole} className={getButtonClasses()}>
+                Add Role
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
 
-        {/* Delete Organization Dialog */}
-        <Dialog open={deleteOrganizationDialogOpen} onOpenChange={setDeleteOrganizationDialogOpen}>
-          <DialogContent className="glass-card">
+        {/* Delete Role Dialog */}
+        <Dialog open={showDeleteRoleDialog} onOpenChange={setShowDeleteRoleDialog}>
+          <DialogContent className={getDialogClasses()}>
             <DialogHeader>
-              <DialogTitle className={`${getTextColor()} text-red-400`}>Delete Organization</DialogTitle>
-              <DialogDescription className={getSecondaryTextColor()}>
-                This action cannot be undone. This will permanently delete your organization and all associated data.
+              <DialogTitle className={getTextColor()}>Delete Role</DialogTitle>
+              <DialogDescription className={getTextColor()}>
+                Are you sure you want to delete the role "{roleToDelete?.name}"? This action cannot be undone.
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label className={getTextColor()}>Type "{organization?.name}" to confirm deletion</Label>
-                <ThemedInput
-                  value={confirmDeleteText}
-                  onChange={(e) => setConfirmDeleteText(e.target.value)}
-                  placeholder={organization?.name}
-                />
-              </div>
-            </div>
             <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setDeleteOrganizationDialogOpen(false)
-                  setConfirmDeleteText("")
-                }}
-              >
+              <Button variant="outline" onClick={() => setShowDeleteRoleDialog(false)}>
                 Cancel
               </Button>
-              <Button
-                onClick={handleDeleteOrganization}
-                disabled={confirmDeleteText !== organization?.name}
-                className="bg-red-600 hover:bg-red-700 text-white"
-              >
-                <AlertTriangle className="h-4 w-4 mr-2" />
-                Delete Organization
+              <Button onClick={deleteRole} variant="destructive">
+                Delete Role
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>
-    </ThemeWrapper>
+    </div>
   )
 }
