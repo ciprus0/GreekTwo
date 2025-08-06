@@ -343,6 +343,11 @@ export default function DashboardLayout({
       return true
     }
 
+    // Members is always visible (not a feature toggle)
+    if (feature === "Members") {
+      return true
+    }
+
     // If user is only a New Member and pledge system is enabled
     if (isOnlyNewMember(user) && isPledgeSystemEnabled()) {
       // New members with pledge system can only see these features
@@ -364,7 +369,6 @@ export default function DashboardLayout({
       Library: "library",
       Messages: "messages",
       Announcements: "announcements",
-      Members: "members",
       Gym: "gym",
       Polls: "polls",
       Hours: "hours",

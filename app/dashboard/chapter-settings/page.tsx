@@ -8,11 +8,13 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { useToast } from "@/hooks/use-toast"
 import { useTheme } from "@/lib/theme-context"
 import { useTextColors } from "@/components/theme-wrapper"
 import { api } from "@/lib/supabase-api"
-import { Settings, Users, Award, Calendar, BookOpen, MessageSquare, Megaphone, CheckSquare, Library, Dumbbell, Clock, Plus, X, Palette, Crown, AlertTriangle } from "lucide-react"
+import { Settings, Users, Award, Calendar, BookOpen, MessageSquare, Megaphone, CheckSquare, Library, Dumbbell, Clock, Plus, X, Palette, Crown, AlertTriangle, Mail } from "lucide-react"
+import { QRCodeSVG } from 'qrcode.react'
 
 export default function ChapterSettingsPage() {
   const [loading, setLoading] = useState(true)
@@ -319,10 +321,20 @@ export default function ChapterSettingsPage() {
           <div>
             <h1 className={`text-3xl font-bold ${getTextColor()}`}>Chapter Settings</h1>
             <p className={`text-lg ${getTextColor()}`}>Manage your organization's settings and features</p>
+            {organization && (
+              <div className="mt-2">
+                <p className={`text-sm ${getSecondaryTextColor()}`}>
+                  <strong>Group ID:</strong> {organization.id}
+                </p>
+              </div>
+            )}
           </div>
-          <Button onClick={saveSettings} className={getButtonClasses()}>
-            Save Settings
-          </Button>
+          <div className="flex items-center gap-2">
+            <InviteMembersButton organization={organization} />
+            <Button onClick={saveSettings} className={getButtonClasses()}>
+              Save Settings
+            </Button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -578,5 +590,95 @@ export default function ChapterSettingsPage() {
         </Dialog>
       </div>
     </div>
+  )
+}
+
+// Invite Members Button Component
+function InviteMembersButton({ organization }) {
+  const [showInviteDialog, setShowInviteDialog] = useState(false)
+  const { theme } = useTheme()
+  const { getTextColor, getCardClasses, getButtonClasses } = useTextColors()
+
+  const invitationUrl = organization ? `${window.location.origin}/register?org=${organization.id}` : ''
+  
+  const copyToClipboard = async () => {
+    try {
+      await navigator.clipboard.writeText(invitationUrl)
+      // You could add a toast notification here
+    } catch (err) {
+      console.error('Failed to copy: ', err)
+    }
+  }
+
+  return (
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button className="bg-red-600/80 hover:bg-red-700/80 backdrop-blur-sm border border-red-500/30">
+            <Plus className="h-4 w-4 mr-2" />
+            Invite Members
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent className={`${getCardClasses()} border-slate-700/50`} align="end">
+          <DropdownMenuItem
+            onClick={() => setShowInviteDialog(true)}
+            className={`${getTextColor()} hover:bg-slate-700/30 cursor-pointer`}
+          >
+            <QRCodeSVG className="h-4 w-4 mr-2" />
+            QR Code
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={copyToClipboard}
+            className={`${getTextColor()} hover:bg-slate-700/30 cursor-pointer`}
+          >
+            <Mail className="h-4 w-4 mr-2" />
+            Copy Link
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      {/* Invite Dialog */}
+      <Dialog open={showInviteDialog} onOpenChange={setShowInviteDialog}>
+        <DialogContent className={`${getCardClasses()} border-slate-700/50 max-w-md`}>
+          <DialogHeader>
+            <DialogTitle className={getTextColor()}>Invite Members</DialogTitle>
+            <DialogDescription className={getTextColor()}>
+              Scan this QR code to join {organization?.name || 'the organization'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col items-center space-y-4">
+            <div className="bg-white p-4 rounded-lg">
+              <QRCodeSVG value={invitationUrl} size={200} />
+            </div>
+            <div className="text-center">
+              <p className={`text-sm ${getTextColor()} mb-2`}>Or share this link:</p>
+              <div className="flex items-center gap-2">
+                <Input
+                  value={invitationUrl}
+                  readOnly
+                  className="bg-slate-700/50 border-slate-600/50 text-white"
+                />
+                <Button
+                  size="sm"
+                  onClick={copyToClipboard}
+                  className="bg-red-600/80 hover:bg-red-700/80"
+                >
+                  Copy
+                </Button>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowInviteDialog(false)}
+              className="bg-slate-700/50 border-slate-600/50 text-white hover:bg-slate-600/50"
+            >
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }
