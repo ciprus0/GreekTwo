@@ -163,12 +163,14 @@ export default function RegisterPage() {
         name: formData.name,
         email: formData.email,
         password: formData.password, // This will be hashed in the API
-        phone_number: formData.phone_number || null,
+        phoneNumber: formData.phone_number || null,
         major: formData.major || null,
-        organization_id: organizationId, // Use the correct UUID
+        organizationId: organizationId, // Use the correct UUID
+        chapter: selectedOrganization?.chapter_designation || "",
+        university: selectedOrganization?.university || "",
+        organizationType: selectedOrganization?.type || "",
         approved: false, // Requires admin approval
         roles: ["New Member"], // Default role
-        join_date: new Date().toISOString(),
       }
 
       const newMember = await api.createMember(memberData)
