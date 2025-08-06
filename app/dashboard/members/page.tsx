@@ -491,13 +491,6 @@ export default function MembersPage() {
         <div>
           <h1 className={`text-3xl font-bold ${getTextColor()}`}>Members</h1>
           <p className={`${getSecondaryTextColor()} mt-2`}>Manage your organization members</p>
-          {organization && (
-            <div className="mt-2">
-              <p className={`text-sm ${getSecondaryTextColor()}`}>
-                <strong>Group ID:</strong> {organization.id}
-              </p>
-            </div>
-          )}
         </div>
         {canManageMembers && (
           <InviteMembersButton organization={organization} />
