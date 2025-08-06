@@ -245,6 +245,127 @@ export interface GymLocation {
   created_at: string
 }
 
+export interface Election {
+  id: string
+  title: string
+  description: string
+  organization_id: string
+  created_by: string
+  start_date: string
+  end_date: string
+  status: 'upcoming' | 'active' | 'completed'
+  positions: ElectionPosition[]
+  created_at: string
+  updated_at: string
+}
+
+export interface ElectionPosition {
+  id: string
+  election_id: string
+  title: string
+  description: string
+  order: number
+  created_at: string
+}
+
+export interface ElectionNomination {
+  id: string
+  election_id: string
+  position_id: string
+  nominee_id: string
+  nominee_name: string
+  nominee_email: string
+  nominated_by: string
+  status: 'pending' | 'accepted' | 'declined'
+  created_at: string
+}
+
+export interface ElectionVote {
+  id: string
+  election_id: string
+  position_id: string
+  voter_id: string
+  nominee_id: string
+  created_at: string
+}
+
+export interface ElectionResult {
+  position_id: string
+  position_title: string
+  nominees: {
+    nominee_id: string
+    nominee_name: string
+    vote_count: number
+    percentage: number
+  }[]
+}
+
+// House Points interfaces
+export interface HousePointActivity {
+  id: string
+  title: string
+  description: string
+  points: number
+  organization_id: string
+  created_by: string
+  start_date: string
+  end_date: string
+  start_time: string
+  end_time: string
+  submission_type: 'qr' | 'file'
+  status: 'active' | 'expired' | 'completed'
+  created_at: string
+}
+
+export interface HousePointSubmission {
+  id: string
+  activity_id: string
+  user_id: string
+  user_name: string
+  submission_data: string // QR code data or file URL
+  submission_type: 'qr' | 'file'
+  status: 'pending' | 'approved' | 'rejected'
+  points_awarded: number
+  reviewed_by?: string
+  reviewed_at?: string
+  created_at: string
+}
+
+export interface HousePointUser {
+  id: string
+  user_id: string
+  organization_id: string
+  total_points: number
+  created_at: string
+  updated_at: string
+}
+
+// Poll interfaces
+export interface Poll {
+  id: string
+  title: string
+  description: string
+  options: string[]
+  organization_id: string
+  created_by: string
+  target_audience: 'all' | 'specific'
+  target_members?: string[]
+  start_time: string
+  end_time: string
+  allow_multiple_votes: boolean
+  anonymous: boolean
+  status: 'active' | 'expired' | 'completed'
+  created_at: string
+}
+
+export interface PollVote {
+  id: string
+  poll_id: string
+  voter_id: string
+  selected_options: string[]
+  created_at: string
+}
+
 // Password hashing utility
 async function hashPassword(password: string): Promise<string> {
   const encoder = new TextEncoder()
@@ -3221,5 +3342,657 @@ export const api = {
       30 * 60 * 1000,
     ) // Cache for 30 minutes
   },
+
+  async createElection(electionData: Omit<Election, "id" | "created_at" | "updated_at">): Promise<Election> {
+    const { data, error } = await supabase.from("elections").insert(electionData).select().single()
+    if (error) {
+      throw new Error(`Failed to create election: ${error.message}`)
+    }
+
+    // Invalidate elections cache
+    invalidateOrganizationCache(electionData.organization_id)
+
+    return data as Election
+  },
+
+  async getElectionsByOrganization(organizationId: string): Promise<Election[]> {
+    if (!organizationId) return []
+
+    const cacheKey = getCacheKey("elections", organizationId)
+
+    return withCache(
+      cacheKey,
+      async () => {
+        const { data, error } = await supabase
+          .from("elections")
+          .select("*")
+          .eq("organization_id", organizationId)
+          .order("start_date", { ascending: true })
+
+        if (error) {
+          throw new Error(`Failed to fetch elections: ${error.message}`)
+        }
+
+        return (data || []) as Election[]
+      },
+      5 * 60 * 1000,
+    ) // Cache for 5 minutes
+  },
+
+  async updateElection(id: string, updates: Partial<Election>): Promise<Election | null> {
+    if (!id) return null
+    const { data, error } = await supabase.from("elections").update(updates).eq("id", id).select().single()
+    if (error) {
+      console.error("❌ Error updating election:", error)
+      throw new Error(`Failed to update election: ${error.message}`)
+    }
+
+    // Clear elections cache
+    const election = data as Election
+    cacheManager.delete(getCacheKey("elections", election.organization_id))
+
+    return election
+  },
+
+  async deleteElection(id: string): Promise<boolean> {
+    if (!id) return false
+
+    // Get election info before deletion to clear cache
+    const { data: election } = await supabase.from("elections").select("organization_id").eq("id", id).single()
+
+    const { error } = await supabase.from("elections").delete().eq("id", id)
+    if (error) {
+      console.error("❌ Error deleting election:", error)
+      throw new Error(`Failed to delete election: ${error.message}`)
+    }
+
+    // Clear cache
+    if (election) {
+      cacheManager.delete(getCacheKey("elections", election.organization_id))
+    }
+
+    return true
+  },
+
+  async createElectionPosition(positionData: Omit<ElectionPosition, "id" | "created_at">): Promise<ElectionPosition> {
+    const { data, error } = await supabase.from("election_positions").insert(positionData).select().single()
+    if (error) {
+      throw new Error(`Failed to create election position: ${error.message}`)
+    }
+
+    // Invalidate election positions cache
+    invalidateOrganizationCache(positionData.election_id)
+
+    return data as ElectionPosition
+  },
+
+  async getElectionPositionsByElection(electionId: string): Promise<ElectionPosition[]> {
+    if (!electionId) return []
+
+    const cacheKey = getCacheKey("election_positions", electionId)
+
+    return withCache(
+      cacheKey,
+      async () => {
+        const { data, error } = await supabase
+          .from("election_positions")
+          .select("*")
+          .eq("election_id", electionId)
+          .order("order", { ascending: true })
+
+        if (error) {
+          throw new Error(`Failed to fetch election positions: ${error.message}`)
+        }
+
+        return (data || []) as ElectionPosition[]
+      },
+      5 * 60 * 1000,
+    ) // Cache for 5 minutes
+  },
+
+  async updateElectionPosition(id: string, updates: Partial<ElectionPosition>): Promise<ElectionPosition | null> {
+    if (!id) return null
+    const { data, error } = await supabase.from("election_positions").update(updates).eq("id", id).select().single()
+    if (error) {
+      console.error("❌ Error updating election position:", error)
+      throw new Error(`Failed to update election position: ${error.message}`)
+    }
+
+    // Clear election positions cache
+    const position = data as ElectionPosition
+    cacheManager.delete(getCacheKey("election_positions", position.election_id))
+
+    return position
+  },
+
+  async deleteElectionPosition(id: string): Promise<boolean> {
+    if (!id) return false
+
+    // Get election position info before deletion to clear cache
+    const { data: position } = await supabase.from("election_positions").select("election_id").eq("id", id).single()
+
+    const { error } = await supabase.from("election_positions").delete().eq("id", id)
+    if (error) {
+      console.error("❌ Error deleting election position:", error)
+      throw new Error(`Failed to delete election position: ${error.message}`)
+    }
+
+    // Clear cache
+    if (position) {
+      cacheManager.delete(getCacheKey("election_positions", position.election_id))
+    }
+
+    return true
+  },
+
+  async createElectionNomination(nominationData: Omit<ElectionNomination, "id" | "created_at">): Promise<ElectionNomination> {
+    const { data, error } = await supabase.from("election_nominations").insert(nominationData).select().single()
+    if (error) {
+      throw new Error(`Failed to create election nomination: ${error.message}`)
+    }
+
+    // Invalidate election nominations cache
+    invalidateOrganizationCache(nominationData.election_id)
+
+    return data as ElectionNomination
+  },
+
+  async getElectionNominationsByElection(electionId: string): Promise<ElectionNomination[]> {
+    if (!electionId) return []
+
+    const cacheKey = getCacheKey("election_nominations", electionId)
+
+    return withCache(
+      cacheKey,
+      async () => {
+        const { data, error } = await supabase
+          .from("election_nominations")
+          .select("*")
+          .eq("election_id", electionId)
+          .order("nominee_name", { ascending: true })
+
+        if (error) {
+          throw new Error(`Failed to fetch election nominations: ${error.message}`)
+        }
+
+        return (data || []) as ElectionNomination[]
+      },
+      5 * 60 * 1000,
+    ) // Cache for 5 minutes
+  },
+
+  async updateElectionNomination(id: string, updates: Partial<ElectionNomination>): Promise<ElectionNomination | null> {
+    if (!id) return null
+    const { data, error } = await supabase.from("election_nominations").update(updates).eq("id", id).select().single()
+    if (error) {
+      console.error("❌ Error updating election nomination:", error)
+      throw new Error(`Failed to update election nomination: ${error.message}`)
+    }
+
+    // Clear election nominations cache
+    const nomination = data as ElectionNomination
+    cacheManager.delete(getCacheKey("election_nominations", nomination.election_id))
+
+    return nomination
+  },
+
+  async deleteElectionNomination(id: string): Promise<boolean> {
+    if (!id) return false
+
+    // Get election nomination info before deletion to clear cache
+    const { data: nomination } = await supabase.from("election_nominations").select("election_id").eq("id", id).single()
+
+    const { error } = await supabase.from("election_nominations").delete().eq("id", id)
+    if (error) {
+      console.error("❌ Error deleting election nomination:", error)
+      throw new Error(`Failed to delete election nomination: ${error.message}`)
+    }
+
+    // Clear cache
+    if (nomination) {
+      cacheManager.delete(getCacheKey("election_nominations", nomination.election_id))
+    }
+
+    return true
+  },
+
+  async createElectionVote(voteData: Omit<ElectionVote, "id" | "created_at">): Promise<ElectionVote> {
+    const { data, error } = await supabase.from("election_votes").insert(voteData).select().single()
+    if (error) {
+      throw new Error(`Failed to create election vote: ${error.message}`)
+    }
+
+    // Invalidate election votes cache
+    invalidateOrganizationCache(voteData.election_id)
+
+    return data as ElectionVote
+  },
+
+  async getElectionVotesByElection(electionId: string): Promise<ElectionVote[]> {
+    if (!electionId) return []
+
+    const cacheKey = getCacheKey("election_votes", electionId)
+
+    return withCache(
+      cacheKey,
+      async () => {
+        const { data, error } = await supabase
+          .from("election_votes")
+          .select("*")
+          .eq("election_id", electionId)
+          .order("created_at", { ascending: true })
+
+        if (error) {
+          throw new Error(`Failed to fetch election votes: ${error.message}`)
+        }
+
+        return (data || []) as ElectionVote[]
+      },
+      5 * 60 * 1000,
+    ) // Cache for 5 minutes
+  },
+
+  async updateElectionVote(id: string, updates: Partial<ElectionVote>): Promise<ElectionVote | null> {
+    if (!id) return null
+    const { data, error } = await supabase.from("election_votes").update(updates).eq("id", id).select().single()
+    if (error) {
+      console.error("❌ Error updating election vote:", error)
+      throw new Error(`Failed to update election vote: ${error.message}`)
+    }
+
+    // Clear election votes cache
+    const vote = data as ElectionVote
+    cacheManager.delete(getCacheKey("election_votes", vote.election_id))
+
+    return vote
+  },
+
+  async deleteElectionVote(id: string): Promise<boolean> {
+    if (!id) return false
+
+    // Get election vote info before deletion to clear cache
+    const { data: vote } = await supabase.from("election_votes").select("election_id").eq("id", id).single()
+
+    const { error } = await supabase.from("election_votes").delete().eq("id", id)
+    if (error) {
+      console.error("❌ Error deleting election vote:", error)
+      throw new Error(`Failed to delete election vote: ${error.message}`)
+    }
+
+    // Clear cache
+    if (vote) {
+      cacheManager.delete(getCacheKey("election_votes", vote.election_id))
+    }
+
+    return true
+  },
+
+  async getElectionResultsByElection(electionId: string): Promise<ElectionResult[]> {
+    if (!electionId) return []
+
+    const cacheKey = getCacheKey("election_results", electionId)
+
+    return withCache(
+      cacheKey,
+      async () => {
+        const { data, error } = await supabase
+          .from("election_results")
+          .select("*")
+          .eq("election_id", electionId)
+          .order("position_title", { ascending: true })
+
+        if (error) {
+          throw new Error(`Failed to fetch election results: ${error.message}`)
+        }
+
+        return (data || []) as ElectionResult[]
+      },
+      5 * 60 * 1000,
+    ) // Cache for 5 minutes
+  },
+
+  async createHousePointActivity(activityData: Omit<HousePointActivity, "id" | "created_at">): Promise<HousePointActivity> {
+    const { data, error } = await supabase.from("house_point_activities").insert(activityData).select().single()
+    if (error) {
+      throw new Error(`Failed to create house point activity: ${error.message}`)
+    }
+
+    // Invalidate house point activities cache
+    invalidateOrganizationCache(activityData.organization_id)
+
+    return data as HousePointActivity
+  },
+
+  async getHousePointActivitiesByOrganization(organizationId: string): Promise<HousePointActivity[]> {
+    if (!organizationId) return []
+
+    const cacheKey = getCacheKey("house_point_activities", organizationId)
+
+    return withCache(
+      cacheKey,
+      async () => {
+        const { data, error } = await supabase
+          .from("house_point_activities")
+          .select("*")
+          .eq("organization_id", organizationId)
+          .order("start_date", { ascending: true })
+
+        if (error) {
+          throw new Error(`Failed to fetch house point activities: ${error.message}`)
+        }
+
+        return (data || []) as HousePointActivity[]
+      },
+      5 * 60 * 1000,
+    ) // Cache for 5 minutes
+  },
+
+  async updateHousePointActivity(id: string, updates: Partial<HousePointActivity>): Promise<HousePointActivity | null> {
+    if (!id) return null
+    const { data, error } = await supabase.from("house_point_activities").update(updates).eq("id", id).select().single()
+    if (error) {
+      console.error("❌ Error updating house point activity:", error)
+      throw new Error(`Failed to update house point activity: ${error.message}`)
+    }
+
+    // Clear house point activities cache
+    const activity = data as HousePointActivity
+    cacheManager.delete(getCacheKey("house_point_activities", activity.organization_id))
+
+    return activity
+  },
+
+  async deleteHousePointActivity(id: string): Promise<boolean> {
+    if (!id) return false
+
+    // Get house point activity info before deletion to clear cache
+    const { data: activity } = await supabase.from("house_point_activities").select("organization_id").eq("id", id).single()
+
+    const { error } = await supabase.from("house_point_activities").delete().eq("id", id)
+    if (error) {
+      console.error("❌ Error deleting house point activity:", error)
+      throw new Error(`Failed to delete house point activity: ${error.message}`)
+    }
+
+    // Clear cache
+    if (activity) {
+      cacheManager.delete(getCacheKey("house_point_activities", activity.organization_id))
+    }
+
+    return true
+  },
+
+  async createHousePointSubmission(submissionData: Omit<HousePointSubmission, "id" | "created_at">): Promise<HousePointSubmission> {
+    const { data, error } = await supabase.from("house_point_submissions").insert(submissionData).select().single()
+    if (error) {
+      throw new Error(`Failed to create house point submission: ${error.message}`)
+    }
+
+    // Invalidate house point submissions cache
+    invalidateOrganizationCache(submissionData.activity_id)
+
+    return data as HousePointSubmission
+  },
+
+  async getHousePointSubmissionsByActivity(activityId: string): Promise<HousePointSubmission[]> {
+    if (!activityId) return []
+
+    const cacheKey = getCacheKey("house_point_submissions", activityId)
+
+    return withCache(
+      cacheKey,
+      async () => {
+        const { data, error } = await supabase
+          .from("house_point_submissions")
+          .select("*")
+          .eq("activity_id", activityId)
+          .order("created_at", { ascending: true })
+
+        if (error) {
+          throw new Error(`Failed to fetch house point submissions: ${error.message}`)
+        }
+
+        return (data || []) as HousePointSubmission[]
+      },
+      5 * 60 * 1000,
+    ) // Cache for 5 minutes
+  },
+
+  async updateHousePointSubmission(id: string, updates: Partial<HousePointSubmission>): Promise<HousePointSubmission | null> {
+    if (!id) return null
+    const { data, error } = await supabase.from("house_point_submissions").update(updates).eq("id", id).select().single()
+    if (error) {
+      console.error("❌ Error updating house point submission:", error)
+      throw new Error(`Failed to update house point submission: ${error.message}`)
+    }
+
+    // Clear house point submissions cache
+    const submission = data as HousePointSubmission
+    cacheManager.delete(getCacheKey("house_point_submissions", submission.activity_id))
+
+    return submission
+  },
+
+  async deleteHousePointSubmission(id: string): Promise<boolean> {
+    if (!id) return false
+
+    // Get house point submission info before deletion to clear cache
+    const { data: submission } = await supabase.from("house_point_submissions").select("activity_id").eq("id", id).single()
+
+    const { error } = await supabase.from("house_point_submissions").delete().eq("id", id)
+    if (error) {
+      console.error("❌ Error deleting house point submission:", error)
+      throw new Error(`Failed to delete house point submission: ${error.message}`)
+    }
+
+    // Clear cache
+    if (submission) {
+      cacheManager.delete(getCacheKey("house_point_submissions", submission.activity_id))
+    }
+
+    return true
+  },
+
+  async getHousePointUser(userId: string, organizationId: string): Promise<HousePointUser | null> {
+    if (!userId || !organizationId) return null
+
+    const cacheKey = getCacheKey("house_point_user", userId, organizationId)
+
+    return withCache(
+      cacheKey,
+      async () => {
+        const { data, error } = await supabase
+          .from("house_point_users")
+          .select("*")
+          .eq("user_id", userId)
+          .eq("organization_id", organizationId)
+          .single()
+
+        if (error) {
+          throw new Error(`Failed to fetch house point user: ${error.message}`)
+        }
+
+        return data as HousePointUser | null
+      },
+      5 * 60 * 1000,
+    ) // Cache for 5 minutes
+  },
+
+  async updateHousePointUser(id: string, updates: Partial<HousePointUser>): Promise<HousePointUser | null> {
+    if (!id) return null
+    const { data, error } = await supabase.from("house_point_users").update(updates).eq("id", id).select().single()
+    if (error) {
+      console.error("❌ Error updating house point user:", error)
+      throw new Error(`Failed to update house point user: ${error.message}`)
+    }
+
+    // Clear house point users cache
+    cacheManager.delete(getCacheKey("house_point_users", id))
+
+    return data as HousePointUser | null
+  },
+
+  async deleteHousePointUser(id: string): Promise<boolean> {
+    if (!id) return false
+
+    // Get house point user info before deletion to clear cache
+    const { data: user } = await supabase.from("house_point_users").select("organization_id").eq("id", id).single()
+
+    const { error } = await supabase.from("house_point_users").delete().eq("id", id)
+    if (error) {
+      console.error("❌ Error deleting house point user:", error)
+      throw new Error(`Failed to delete house point user: ${error.message}`)
+    }
+
+    // Clear cache
+    if (user) {
+      cacheManager.delete(getCacheKey("house_point_users", user.organization_id))
+    }
+
+    return true
+  },
+
+  async createPoll(pollData: Omit<Poll, "id" | "created_at">): Promise<Poll> {
+    const { data, error } = await supabase.from("polls").insert(pollData).select().single()
+    if (error) {
+      throw new Error(`Failed to create poll: ${error.message}`)
+    }
+
+    // Invalidate polls cache
+    invalidateOrganizationCache(pollData.organization_id)
+
+    return data as Poll
+  },
+
+  async getPollsByOrganization(organizationId: string): Promise<Poll[]> {
+    if (!organizationId) return []
+
+    const cacheKey = getCacheKey("polls", organizationId)
+
+    return withCache(
+      cacheKey,
+      async () => {
+        const { data, error } = await supabase
+          .from("polls")
+          .select("*")
+          .eq("organization_id", organizationId)
+          .order("start_time", { ascending: true })
+
+        if (error) {
+          throw new Error(`Failed to fetch polls: ${error.message}`)
+        }
+
+        return (data || []) as Poll[]
+      },
+      5 * 60 * 1000,
+    ) // Cache for 5 minutes
+  },
+
+  async updatePoll(id: string, updates: Partial<Poll>): Promise<Poll | null> {
+    if (!id) return null
+    const { data, error } = await supabase.from("polls").update(updates).eq("id", id).select().single()
+    if (error) {
+      console.error("❌ Error updating poll:", error)
+      throw new Error(`Failed to update poll: ${error.message}`)
+    }
+
+    // Clear polls cache
+    const poll = data as Poll
+    cacheManager.delete(getCacheKey("polls", poll.organization_id))
+
+    return poll
+  },
+
+  async deletePoll(id: string): Promise<boolean> {
+    if (!id) return false
+
+    // Get poll info before deletion to clear cache
+    const { data: poll } = await supabase.from("polls").select("organization_id").eq("id", id).single()
+
+    const { error } = await supabase.from("polls").delete().eq("id", id)
+    if (error) {
+      console.error("❌ Error deleting poll:", error)
+      throw new Error(`Failed to delete poll: ${error.message}`)
+    }
+
+    // Clear cache
+    if (poll) {
+      cacheManager.delete(getCacheKey("polls", poll.organization_id))
+    }
+
+    return true
+  },
+
+  async createPollVote(voteData: Omit<PollVote, "id" | "created_at">): Promise<PollVote> {
+    const { data, error } = await supabase.from("poll_votes").insert(voteData).select().single()
+    if (error) {
+      throw new Error(`Failed to create poll vote: ${error.message}`)
+    }
+
+    // Invalidate poll votes cache
+    invalidateOrganizationCache(voteData.poll_id)
+
+    return data as PollVote
+  },
+
+  async getPollVotesByPoll(pollId: string): Promise<PollVote[]> {
+    if (!pollId) return []
+
+    const cacheKey = getCacheKey("poll_votes", pollId)
+
+    return withCache(
+      cacheKey,
+      async () => {
+        const { data, error } = await supabase
+          .from("poll_votes")
+          .select("*")
+          .eq("poll_id", pollId)
+          .order("created_at", { ascending: true })
+
+        if (error) {
+          throw new Error(`Failed to fetch poll votes: ${error.message}`)
+        }
+
+        return (data || []) as PollVote[]
+      },
+      5 * 60 * 1000,
+    ) // Cache for 5 minutes
+  },
+
+  async updatePollVote(id: string, updates: Partial<PollVote>): Promise<PollVote | null> {
+    if (!id) return null
+    const { data, error } = await supabase.from("poll_votes").update(updates).eq("id", id).select().single()
+    if (error) {
+      console.error("❌ Error updating poll vote:", error)
+      throw new Error(`Failed to update poll vote: ${error.message}`)
+    }
+
+    // Clear poll votes cache
+    const vote = data as PollVote
+    cacheManager.delete(getCacheKey("poll_votes", vote.poll_id))
+
+    return vote
+  },
+
+  async deletePollVote(id: string): Promise<boolean> {
+    if (!id) return false
+
+    // Get poll vote info before deletion to clear cache
+    const { data: vote } = await supabase.from("poll_votes").select("poll_id").eq("id", id).single()
+
+    const { error } = await supabase.from("poll_votes").delete().eq("id", id)
+    if (error) {
+      console.error("❌ Error deleting poll vote:", error)
+      throw new Error(`Failed to delete poll vote: ${error.message}`)
+    }
+
+    // Clear cache
+    if (vote) {
+      cacheManager.delete(getCacheKey("poll_votes", vote.poll_id))
+    }
+
+    return true
+  },
+
   supabase, // Export the supabase client for direct access
 }

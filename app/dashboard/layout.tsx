@@ -633,6 +633,15 @@ export default function DashboardLayout({
               Announcements
             </SidebarLink>
           )}
+          <SidebarLink
+            href="/dashboard/polls"
+            icon={<Vote className="h-5 w-5" />}
+            isActive={isActive("/dashboard/polls")}
+            title="Polls"
+            sidebarCollapsed={sidebarCollapsed}
+          >
+            Polls
+          </SidebarLink>
           {showFeature("Library") && (
             <SidebarLink
               href="/dashboard/library"

@@ -1,0 +1,22 @@
+{
+    "name": "greekone-email-server",
+    "version": "1.0.0",
+    "description": "Email server for GreekOne app using Gmail SMTP",
+    "main": "email-server.js",
+    "scripts": {
+      "start": "node email-server.js",
+      "dev": "nodemon email-server.js"
+    },
+    "dependencies": {
+      "express": "^4.18.2",
+      "nodemailer": "^6.9.7",
+      "cors": "^2.8.5",
+      "dotenv": "^16.3.1"
+    },
+    "devDependencies": {
+      "nodemon": "^3.0.2"
+    },
+    "keywords": ["email", "gmail", "smtp", "greekone"],
+    "author": "GreekOne Team",
+    "license": "MIT"
+  } 
