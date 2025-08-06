@@ -1132,6 +1132,7 @@ function InviteMembersButton({ organization }) {
   const [showInviteDialog, setShowInviteDialog] = useState(false)
   const { theme } = useTheme()
   const { getTextColor, getSecondaryTextColor, getCardClasses, getButtonClasses } = useTextColors()
+  const { toast } = useToast()
 
   const invitationUrl = organization ? `${window.location.origin}/register?org=${organization.group_id}` : ''
   

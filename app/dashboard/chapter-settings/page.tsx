@@ -9,7 +9,7 @@ import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu"
-import { useToast } from "@/hooks/use-toast"
+import { useToast } from "@/components/ui/use-toast"
 import { useTheme } from "@/lib/theme-context"
 import { useTextColors } from "@/components/theme-wrapper"
 import { api } from "@/lib/supabase-api"
@@ -598,6 +598,7 @@ function InviteMembersButton({ organization }) {
   const [showInviteDialog, setShowInviteDialog] = useState(false)
   const { theme } = useTheme()
   const { getTextColor, getSecondaryTextColor, getCardClasses, getButtonClasses } = useTextColors()
+  const { toast } = useToast()
 
   const invitationUrl = organization ? `${window.location.origin}/register?org=${organization.group_id}` : ''
   
