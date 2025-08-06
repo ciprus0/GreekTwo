@@ -40,13 +40,40 @@ export interface Organization {
     createdAt: string
   }>
   features: {
-    events: boolean
-    study: boolean
-    tasks: boolean
-    library: boolean
-    messages: boolean
-    announcements: boolean
-    pledgeSystem: boolean
+    roles: Array<{
+      id: string
+      name: string
+      color: string
+      isAdmin: boolean
+      isDefault: boolean
+    }>
+    features: {
+      gym: boolean
+      hours: boolean
+      polls: boolean
+      study: boolean
+      tasks: boolean
+      events: boolean
+      library: boolean
+      messages: boolean
+      pledgeSystem: boolean
+      announcements: boolean
+    }
+    requirements: {
+      gym: number
+      study: number
+      housePoints: number
+    }
+    trackingSystem: "housePoints" | "hours"
+    pledgeExemption: boolean
+    pledgeExemptions: {
+      study: boolean
+      tasks: boolean
+      events: boolean
+      library: boolean
+      messages: boolean
+      announcements: boolean
+    }
   }
 }
 

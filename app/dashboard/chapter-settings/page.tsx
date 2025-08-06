@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { useToast } from "@/hooks/use-toast"
 import { useTheme } from "@/lib/theme-context"
 import { useTextColors } from "@/components/theme-wrapper"
+import { api } from "@/lib/supabase-api"
 import { Settings, Users, Award, Calendar, BookOpen, MessageSquare, Megaphone, CheckSquare, Library, Dumbbell, Clock, Plus, X, Palette, Crown, AlertTriangle } from "lucide-react"
 
 export default function ChapterSettingsPage() {
@@ -84,16 +85,15 @@ export default function ChapterSettingsPage() {
       const user = JSON.parse(userStr)
       setUserProfile(user)
 
-      // TODO: Replace with actual API calls
-      // const org = await api.getOrganizationById(user.organization_id)
-      // if (org?.features) {
-      //   setOrgSettings(org.features)
-      // }
+      // Load organization data
+      const org = await api.getOrganizationById(user.organization_id)
+      if (org?.features) {
+        setOrgSettings(org.features)
+      }
       
-      // const membersList = await api.getMembersByOrganization(user.organization_id)
-      // setMembers(membersList)
-      
-      setMembers([]) // Placeholder
+      // Load members for role management
+      const membersList = await api.getMembersByOrganization(user.organization_id)
+      setMembers(membersList)
     } catch (error) {
       console.error('Error loading data:', error)
       toast({
@@ -223,8 +223,19 @@ export default function ChapterSettingsPage() {
 
   const saveSettings = async () => {
     try {
-      // TODO: Replace with actual API call
-      console.log('Saving settings:', orgSettings)
+      if (!userProfile?.organization_id) {
+        toast({
+          title: "Error",
+          description: "No organization found",
+          variant: "destructive",
+        })
+        return
+      }
+
+      // Update organization with new features
+      await api.updateOrganization(userProfile.organization_id, {
+        features: orgSettings
+      })
       
       toast({
         title: "Success",
