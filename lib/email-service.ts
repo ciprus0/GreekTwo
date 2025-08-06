@@ -191,21 +191,21 @@ class EmailService {
             <h1>Welcome to ${chapter}!</h1>
             <p>We're excited to have you join our community</p>
           </div>
-          <div class="content">
-            <h2>Hello ${name},</h2>
-            <p>Welcome to ${chapter}! We're thrilled to have you as part of our organization.</p>
-            <p>With GreekOne, you can:</p>
-            <ul>
-              <li>Track your study hours and gym sessions</li>
-              <li>Participate in polls and elections</li>
-              <li>Access the library and resources</li>
-              <li>Stay connected with announcements and messages</li>
-              <li>Manage tasks and events</li>
-            </ul>
-            <p>Your account is now ready to use. You can log in to the platform and start exploring all the features available to you.</p>
-            <p>If you have any questions or need assistance, please don't hesitate to reach out to your chapter administrators.</p>
-            <p>Best regards,<br>The ${chapter} Team</p>
-          </div>
+                     <div class="content">
+             <h2>Hello ${name},</h2>
+             <p>Welcome to ${chapter}! We're thrilled to have you as part of our organization.</p>
+             <p>With GreekOne, you can:</p>
+             <ul>
+               <li>Track your study hours and gym sessions</li>
+               <li>Participate in polls and elections</li>
+               <li>Access the library and resources</li>
+               <li>Stay connected with announcements and messages</li>
+               <li>Manage tasks and events</li>
+             </ul>
+             <p>Your account is now ready to use. You can log in to the platform and start exploring all the features available to you.</p>
+             <p>If you have any questions or need assistance, please don't hesitate to reach out to your chapter administrators.</p>
+             <p>Best regards,<br>The GreekOne Team</p>
+           </div>
           <div class="footer">
             <p>This email was sent from GreekOne - Your Greek Life Management Platform</p>
           </div>
@@ -296,9 +296,9 @@ class EmailService {
               <li>✅ Complete tasks and requirements</li>
             </ul>
             <p>Your account is now fully activated and ready to use. You can log in to the platform and start exploring all the features available to you.</p>
-            <p>If you have any questions or need assistance getting started, please don't hesitate to reach out to your chapter administrators.</p>
-            <p>Welcome to the ${chapter} community!</p>
-            <p>Best regards,<br>The ${chapter} Team</p>
+                         <p>If you have any questions or need assistance getting started, please don't hesitate to reach out to your chapter administrators.</p>
+             <p>Welcome to the ${chapter} community!</p>
+             <p>Best regards,<br>The GreekOne Team</p>
           </div>
           <div class="footer">
             <p>This email was sent from GreekOne - Your Greek Life Management Platform</p>
