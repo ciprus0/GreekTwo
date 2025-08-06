@@ -1121,9 +1121,17 @@ function InviteMembersButton({ organization }) {
   const copyToClipboard = async () => {
     try {
       await navigator.clipboard.writeText(invitationUrl)
-      // You could add a toast notification here
+      toast({
+        title: "Link Copied!",
+        description: "Invitation link copied to clipboard",
+      })
     } catch (err) {
       console.error('Failed to copy: ', err)
+      toast({
+        title: "Copy Failed",
+        description: "Failed to copy link to clipboard",
+        variant: "destructive",
+      })
     }
   }
 
@@ -1144,13 +1152,31 @@ function InviteMembersButton({ organization }) {
             <QRCodeSVG className="h-4 w-4 mr-2" />
             QR Code
           </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={copyToClipboard}
-            className={`${getTextColor()} hover:bg-slate-700/30 cursor-pointer`}
-          >
-            <Mail className="h-4 w-4 mr-2" />
-            Copy Link
-          </DropdownMenuItem>
+          <DropdownMenuSeparator className="bg-slate-700/50" />
+          <div className="px-2 py-1.5">
+            <p className={`text-xs ${getTextColor()} font-medium mb-1`}>Group ID</p>
+            <p className={`text-xs ${getSecondaryTextColor()} font-mono bg-slate-700/30 px-2 py-1 rounded`}>
+              {organization?.id || 'N/A'}
+            </p>
+          </div>
+          <DropdownMenuSeparator className="bg-slate-700/50" />
+          <div className="px-2 py-1.5">
+            <p className={`text-xs ${getTextColor()} font-medium mb-1`}>Invitation Link</p>
+            <div className="flex items-center gap-2">
+              <Input
+                value={invitationUrl}
+                readOnly
+                className="text-xs bg-slate-700/30 border-slate-600/50 text-white h-8"
+              />
+              <Button
+                size="sm"
+                onClick={copyToClipboard}
+                className="bg-red-600/80 hover:bg-red-700/80 h-8 px-2"
+              >
+                Copy
+              </Button>
+            </div>
+          </div>
         </DropdownMenuContent>
       </DropdownMenu>
 
