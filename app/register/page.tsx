@@ -42,11 +42,15 @@ export default function RegisterPage() {
     // Check for organization group_id in URL
     const groupId = searchParams.get('org')
     if (groupId) {
+      console.log('Loading organization by group_id:', groupId)
       // Find organization by group_id
       api.getOrganizationByGroupId(groupId).then(org => {
         if (org) {
+          console.log('Found organization:', org)
           setSelectedOrganization(org)
           setFormData(prev => ({ ...prev, organization_id: org.id }))
+        } else {
+          console.error('Organization not found for group_id:', groupId)
         }
       }).catch(err => {
         console.error('Error loading organization:', err)
@@ -136,6 +140,21 @@ export default function RegisterPage() {
     
     if (!validateForm()) return
 
+    // Ensure we have the correct organization ID
+    const organizationId = selectedOrganization?.id || formData.organization_id
+    console.log('Selected organization:', selectedOrganization)
+    console.log('Form organization_id:', formData.organization_id)
+    console.log('Final organizationId:', organizationId)
+    
+    if (!organizationId) {
+      toast({
+        title: "Error",
+        description: "No organization selected. Please try again.",
+        variant: "destructive",
+      })
+      return
+    }
+
     try {
       setLoading(true)
 
@@ -146,7 +165,7 @@ export default function RegisterPage() {
         password: formData.password, // This will be hashed in the API
         phone_number: formData.phone_number || null,
         major: formData.major || null,
-        organization_id: formData.organization_id,
+        organization_id: organizationId, // Use the correct UUID
         approved: false, // Requires admin approval
         roles: ["New Member"], // Default role
         join_date: new Date().toISOString(),
