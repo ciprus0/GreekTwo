@@ -83,16 +83,17 @@ export default function ChapterSettingsPage() {
       }
       
       const user = JSON.parse(userStr)
+      console.log('User object:', user) // Debug log
       setUserProfile(user)
 
       // Load organization data
-      const org = await api.getOrganizationById(user.organization_id)
+      const org = await api.getOrganizationById(user.organizationId || user.organization_id)
       if (org?.features) {
         setOrgSettings(org.features)
       }
       
       // Load members for role management
-      const membersList = await api.getMembersByOrganization(user.organization_id)
+      const membersList = await api.getMembersByOrganization(user.organizationId || user.organization_id)
       setMembers(membersList)
     } catch (error) {
       console.error('Error loading data:', error)
@@ -223,7 +224,8 @@ export default function ChapterSettingsPage() {
 
   const saveSettings = async () => {
     try {
-      if (!userProfile?.organization_id) {
+      const organizationId = userProfile?.organizationId || userProfile?.organization_id
+      if (!organizationId) {
         toast({
           title: "Error",
           description: "No organization found",
@@ -233,7 +235,7 @@ export default function ChapterSettingsPage() {
       }
 
       // Update organization with new features
-      await api.updateOrganization(userProfile.organization_id, {
+      await api.updateOrganization(organizationId, {
         features: orgSettings
       })
       
