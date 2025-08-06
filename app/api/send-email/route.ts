@@ -1,35 +1,19 @@
-// pages/api/send-email.ts (or app/api/send-email/route.ts)
-import { NextApiRequest, NextApiResponse } from 'next'
+// app/api/send-email/route.ts
+import { NextRequest, NextResponse } from 'next/server'
 import EmailService from '../../../lib/email-service' // Adjust path to your email service
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  // Enable CORS
-  res.setHeader('Access-Control-Allow-Origin', '*')
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
-
-  // Handle preflight requests
-  if (req.method === 'OPTIONS') {
-    res.status(200).end()
-    return
-  }
-
-  // Only allow POST requests
-  if (req.method !== 'POST') {
-    return res.status(405).json({ 
-      success: false, 
-      error: 'Method not allowed' 
-    })
-  }
-
+export async function POST(request: NextRequest) {
   try {
-    const { to, subject, html, type, name, chapter, resetUrl } = req.body
+    const body = await request.json()
+    const { to, subject, html, type, name, chapter, resetUrl } = body
+
+    console.log('Received email request:', { to, type, name, chapter })
 
     if (!to || !type) {
-      return res.status(400).json({ 
+      return NextResponse.json({ 
         success: false, 
         error: 'Missing required fields: to, type' 
-      })
+      }, { status: 400 })
     }
 
     let result
@@ -38,49 +22,49 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     switch (type) {
       case 'welcome':
         if (!name || !chapter) {
-          return res.status(400).json({ 
+          return NextResponse.json({ 
             success: false, 
             error: 'Missing required fields for welcome email: name, chapter' 
-          })
+          }, { status: 400 })
         }
         result = await EmailService.sendWelcomeEmail(to, name, chapter)
         break
 
       case 'approval':
         if (!name || !chapter) {
-          return res.status(400).json({ 
+          return NextResponse.json({ 
             success: false, 
             error: 'Missing required fields for approval email: name, chapter' 
-          })
+          }, { status: 400 })
         }
         result = await EmailService.sendApprovalEmail(to, name, chapter)
         break
 
       case 'password-reset':
         if (!resetUrl) {
-          return res.status(400).json({ 
+          return NextResponse.json({ 
             success: false, 
             error: 'Missing required fields for password reset email: resetUrl' 
-          })
+          }, { status: 400 })
         }
         result = await EmailService.sendPasswordResetEmail(to, 'token', resetUrl)
         break
 
       case 'custom':
         if (!subject || !html) {
-          return res.status(400).json({ 
+          return NextResponse.json({ 
             success: false, 
             error: 'Missing required fields for custom email: subject, html' 
-          })
+          }, { status: 400 })
         }
         result = await EmailService.sendEmail(to, subject, html)
         break
 
       default:
-        return res.status(400).json({ 
+        return NextResponse.json({ 
           success: false, 
           error: 'Invalid email type. Must be: welcome, approval, password-reset, or custom' 
-        })
+        }, { status: 400 })
     }
 
     if (result.success) {
@@ -95,19 +79,30 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         response.messageId = result.message
       }
       
-      res.json(response)
+      return NextResponse.json(response)
     } else {
-      res.status(500).json({ 
+      return NextResponse.json({ 
         success: false, 
         error: 'error' in result ? result.error : 'Unknown error' 
-      })
+      }, { status: 500 })
     }
 
   } catch (error) {
     console.error('Error sending email:', error)
-    res.status(500).json({ 
+    return NextResponse.json({ 
       success: false, 
       error: error instanceof Error ? error.message : 'Unknown error' 
-    })
+    }, { status: 500 })
   }
+}
+
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 200,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
+    },
+  })
 }
