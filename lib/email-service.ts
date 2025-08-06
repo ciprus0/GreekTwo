@@ -69,6 +69,31 @@ class EmailService {
   }
 
   /**
+   * Send approval email to newly approved members
+   * @param email - User's email address
+   * @param name - User's name
+   * @param chapter - User's chapter/organization name
+   */
+  async sendApprovalEmail(email: string, name: string, chapter: string) {
+    try {
+      const template = this.getApprovalEmailTemplate(name, chapter)
+      
+      const result = await this.sendEmail(email, template.subject, template.html)
+      
+      if (result.success) {
+        console.log('Approval email sent successfully to:', email)
+      } else {
+        console.error('Failed to send approval email:', result.error)
+      }
+      
+      return result
+    } catch (error) {
+      console.error('Error sending approval email:', error)
+      return { success: false, error }
+    }
+  }
+
+  /**
    * Send email via Gmail SMTP
    * @param to - Recipient email
    * @param subject - Email subject
@@ -173,6 +198,100 @@ class EmailService {
             </ul>
             <p>Your account is now ready to use. You can log in to the platform and start exploring all the features available to you.</p>
             <p>If you have any questions or need assistance, please don't hesitate to reach out to your chapter administrators.</p>
+            <p>Best regards,<br>The ${chapter} Team</p>
+          </div>
+          <div class="footer">
+            <p>This email was sent from GreekOne - Your Greek Life Management Platform</p>
+          </div>
+        </body>
+        </html>
+      `
+    }
+  }
+
+  /**
+   * Get approval email template
+   * @param name - User's name
+   * @param chapter - User's chapter/organization name
+   */
+  private getApprovalEmailTemplate(name: string, chapter: string) {
+    return {
+      subject: `Welcome to ${chapter}! Your Account Has Been Approved`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Account Approved - ${chapter}</title>
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              line-height: 1.6;
+              color: #333;
+              max-width: 600px;
+              margin: 0 auto;
+              padding: 20px;
+            }
+            .header {
+              background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+              color: white;
+              padding: 30px;
+              text-align: center;
+              border-radius: 10px 10px 0 0;
+            }
+            .content {
+              background: #f9f9f9;
+              padding: 30px;
+              border-radius: 0 0 10px 10px;
+            }
+            .button {
+              display: inline-block;
+              background: #10b981;
+              color: white;
+              padding: 12px 24px;
+              text-decoration: none;
+              border-radius: 5px;
+              margin: 20px 0;
+            }
+            .success-box {
+              background: #d1fae5;
+              border: 1px solid #a7f3d0;
+              color: #065f46;
+              padding: 15px;
+              border-radius: 5px;
+              margin: 20px 0;
+            }
+            .footer {
+              text-align: center;
+              margin-top: 30px;
+              color: #666;
+              font-size: 14px;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>🎉 Account Approved!</h1>
+            <p>Welcome to ${chapter}</p>
+          </div>
+          <div class="content">
+            <h2>Hello ${name},</h2>
+            <div class="success-box">
+              <strong>Great news!</strong> Your account has been approved and you now have full access to ${chapter} on GreekOne.
+            </div>
+            <p>You can now:</p>
+            <ul>
+              <li>📅 View and RSVP to chapter events</li>
+              <li>📊 Track your study hours and gym sessions</li>
+              <li>💬 Participate in chapter discussions and announcements</li>
+              <li>🗳️ Vote in polls and elections</li>
+              <li>📚 Access the library and resources</li>
+              <li>✅ Complete tasks and requirements</li>
+            </ul>
+            <p>Your account is now fully activated and ready to use. You can log in to the platform and start exploring all the features available to you.</p>
+            <p>If you have any questions or need assistance getting started, please don't hesitate to reach out to your chapter administrators.</p>
+            <p>Welcome to the ${chapter} community!</p>
             <p>Best regards,<br>The ${chapter} Team</p>
           </div>
           <div class="footer">

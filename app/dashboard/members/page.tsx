@@ -184,6 +184,30 @@ export default function MembersPage() {
       if (member) {
         setPendingMembers((prev) => prev.filter((m) => m.id !== memberId))
         setMembers((prev) => [...prev, { ...member, approved: true, roles: ["New Member"] }])
+
+        // Send approval email
+        try {
+          const response = await fetch('/api/user/approval-email', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              email: member.email,
+              name: member.name,
+              chapter: organization?.name || 'the organization'
+            }),
+          })
+
+          if (response.ok) {
+            console.log('Approval email sent successfully to:', member.email)
+          } else {
+            console.error('Failed to send approval email:', await response.text())
+          }
+        } catch (emailError) {
+          console.error('Error sending approval email:', emailError)
+          // Don't fail the approval process if email fails
+        }
       }
 
       toast({
