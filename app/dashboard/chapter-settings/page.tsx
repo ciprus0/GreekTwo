@@ -86,14 +86,51 @@ export default function ChapterSettingsPage() {
       console.log('User object:', user) // Debug log
       setUserProfile(user)
 
+      // Get organization ID from user metadata (like mobile app)
+      const organizationId = user.user_metadata?.organization_id || user.organizationId || user.organization_id
+      
+      if (!organizationId) {
+        console.error('No organization ID found')
+        toast({
+          title: "Error",
+          description: "No organization found",
+          variant: "destructive",
+        })
+        setLoading(false)
+        return
+      }
+
       // Load organization data
-      const org = await api.getOrganizationById(user.organizationId || user.organization_id)
-      if (org?.features) {
-        setOrgSettings(org.features)
+      const org = await api.getOrganizationById(organizationId)
+      if (org?.features && typeof org.features === 'object') {
+        // Parse features from JSONB with fallback (like mobile app)
+        if (org.features.roles && org.features.features) {
+          // This is the entire customization object
+          setOrgSettings({
+            roles: org.features.roles,
+            features: org.features.features,
+            requirements: org.features.requirements,
+            trackingSystem: org.features.trackingSystem,
+            pledgeExemption: org.features.pledgeExemption,
+            pledgeExemptions: org.features.pledgeExemptions
+          })
+        } else if (org.features.roles && !org.features.features) {
+          // This is the old format where roles were stored separately
+          setOrgSettings(prev => ({
+            ...prev,
+            roles: org.features.roles
+          }))
+        } else {
+          // This is just a features object
+          setOrgSettings(prev => ({
+            ...prev,
+            features: { ...prev.features, ...org.features }
+          }))
+        }
       }
       
       // Load members for role management
-      const membersList = await api.getMembersByOrganization(user.organizationId || user.organization_id)
+      const membersList = await api.getMembersByOrganization(organizationId)
       setMembers(membersList)
     } catch (error) {
       console.error('Error loading data:', error)
@@ -224,7 +261,9 @@ export default function ChapterSettingsPage() {
 
   const saveSettings = async () => {
     try {
-      const organizationId = userProfile?.organizationId || userProfile?.organization_id
+      // Get organization ID from user metadata (like mobile app)
+      const organizationId = userProfile?.user_metadata?.organization_id || userProfile?.organizationId || userProfile?.organization_id
+      
       if (!organizationId) {
         toast({
           title: "Error",
@@ -234,9 +273,9 @@ export default function ChapterSettingsPage() {
         return
       }
 
-      // Update organization with new features
+      // Save the entire customization object to the features column (like mobile app)
       await api.updateOrganization(organizationId, {
-        features: orgSettings
+        features: orgSettings // Save the entire customization object
       })
       
       toast({
@@ -296,7 +335,7 @@ export default function ChapterSettingsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {Object.entries(orgSettings.features).map(([feature, enabled]) => (
+              {orgSettings.features && Object.entries(orgSettings.features).map(([feature, enabled]) => (
                 <div key={feature} className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     {feature === 'gym' && <Dumbbell className="h-5 w-5" />}
@@ -411,7 +450,7 @@ export default function ChapterSettingsPage() {
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
-              {orgSettings.roles.map((role) => (
+              {orgSettings.roles && orgSettings.roles.map((role) => (
                 <div key={role.id} className="flex items-center justify-between p-3 border rounded-lg">
                   <div className="flex items-center gap-3">
                     <div
@@ -451,7 +490,7 @@ export default function ChapterSettingsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {Object.entries(orgSettings.pledgeExemptions).map(([exemption, enabled]) => (
+              {orgSettings.pledgeExemptions && Object.entries(orgSettings.pledgeExemptions).map(([exemption, enabled]) => (
                 <div key={exemption} className="flex items-center justify-between">
                   <Label className={getTextColor()}>
                     {exemption.charAt(0).toUpperCase() + exemption.slice(1).replace(/([A-Z])/g, ' $1')}
