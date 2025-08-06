@@ -969,10 +969,12 @@ export default function EventsPage() {
     const dayEvents = getEventsForDay(day.date)
 
     if (dayEvents.length === 0) {
-      // Open quick event creation for empty days
-      setQuickEventDate(day.date)
-      setIsQuickEventOpen(true)
-      resetQuickEventData()
+      // Only allow admins to create events on empty days
+      if (isAdmin) {
+        setQuickEventDate(day.date)
+        setIsQuickEventOpen(true)
+        resetQuickEventData()
+      }
     } else if (dayEvents.length === 1) {
       setSelectedEvent(dayEvents[0])
     } else {
