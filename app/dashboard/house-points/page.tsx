@@ -24,6 +24,7 @@ export default function HousePointsPage() {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showUploadModal, setShowUploadModal] = useState(false)
   const [showSubmissionsModal, setShowSubmissionsModal] = useState(false)
+  const [showQRModal, setShowQRModal] = useState(false)
   const [selectedActivity, setSelectedActivity] = useState<HousePointActivity | null>(null)
   const [isAdmin, setIsAdmin] = useState(false)
   const [userProfile, setUserProfile] = useState<any>(null)
@@ -270,6 +271,15 @@ export default function HousePointsPage() {
     }
   }
 
+  const handleShowQR = async (activity: HousePointActivity) => {
+    try {
+      setSelectedActivity(activity)
+      setShowQRModal(true)
+    } catch (error) {
+      console.error('Error showing QR code:', error)
+    }
+  }
+
   const handleScanQR = async (activity: HousePointActivity) => {
     try {
       // For web, we'll simulate QR scanning with a prompt
@@ -459,28 +469,40 @@ export default function HousePointsPage() {
             </div>
           </div>
           
-          <div className="mt-4 flex gap-2">
-            {status === 'not_submitted' && !expired && (
-              <>
-                {activity.submission_type === 'qr' ? (
-                  <Button 
-                    onClick={() => handleScanQR(activity)}
-                    className={getButtonClasses()}
-                  >
-                    <QrCode className="h-4 w-4 mr-2" />
-                    Scan QR
-                  </Button>
-                ) : (
-                  <Button 
-                    onClick={() => handleUploadFile(activity)}
-                    className={getButtonClasses()}
-                  >
-                    <Upload className="h-4 w-4 mr-2" />
-                    Upload File
-                  </Button>
-                )}
-              </>
-            )}
+                     <div className="mt-4 flex gap-2">
+             {status === 'not_submitted' && !expired && (
+               <>
+                 {activity.submission_type === 'qr' ? (
+                   <>
+                     {isAdmin ? (
+                       <Button 
+                         onClick={() => handleShowQR(activity)}
+                         className={getButtonClasses()}
+                       >
+                         <QrCode className="h-4 w-4 mr-2" />
+                         Show QR Code
+                       </Button>
+                     ) : (
+                       <Button 
+                         onClick={() => handleScanQR(activity)}
+                         className={getButtonClasses()}
+                       >
+                         <QrCode className="h-4 w-4 mr-2" />
+                         Scan QR
+                       </Button>
+                     )}
+                   </>
+                 ) : (
+                   <Button 
+                     onClick={() => handleUploadFile(activity)}
+                     className={getButtonClasses()}
+                   >
+                     <Upload className="h-4 w-4 mr-2" />
+                     Upload File
+                   </Button>
+                 )}
+               </>
+             )}
             {status === 'pending' && (
               <Button variant="outline" disabled>
                 <ClockIcon className="h-4 w-4 mr-2" />
@@ -693,42 +715,52 @@ export default function HousePointsPage() {
           </DialogContent>
         </Dialog>
 
-        {/* Upload File Modal */}
-        <Dialog open={showUploadModal} onOpenChange={setShowUploadModal}>
-          <DialogContent className={getDialogClasses()}>
-            <DialogHeader>
-              <DialogTitle className={getTextColor()}>Upload File</DialogTitle>
-              <DialogDescription className={getTextColor()}>
-                Upload a file for {selectedActivity?.title}
-              </DialogDescription>
-            </DialogHeader>
-            
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="file" className={getTextColor()}>Select File</Label>
-                <Input
-                  id="file"
-                  type="file"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0]
-                    if (file) {
-                      // For now, we'll just use the file name as submission data
-                      // In a real implementation, you'd upload the file to storage
-                      submitSubmission(selectedActivity!, file.name, 'file')
-                    }
-                  }}
-                  className={getInputClasses()}
-                />
-              </div>
-            </div>
-            
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setShowUploadModal(false)}>
-                Cancel
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+                 {/* Upload File Modal */}
+         <Dialog open={showUploadModal} onOpenChange={setShowUploadModal}>
+           <DialogContent className={getDialogClasses()}>
+             <DialogHeader>
+               <DialogTitle className={getTextColor()}>Upload File</DialogTitle>
+               <DialogDescription className={getTextColor()}>
+                 Upload a file for {selectedActivity?.title}
+               </DialogDescription>
+             </DialogHeader>
+             
+             <div className="space-y-4">
+               <div>
+                 <Label htmlFor="file" className={getTextColor()}>Select File</Label>
+                 <Input
+                   id="file"
+                   type="file"
+                   accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.txt"
+                   onChange={(e) => {
+                     const file = e.target.files?.[0]
+                     if (file) {
+                       // For now, we'll just use the file name as submission data
+                       // In a real implementation, you'd upload the file to storage
+                       submitSubmission(selectedActivity!, file.name, 'file')
+                     }
+                   }}
+                   className={getInputClasses()}
+                 />
+                 <p className={`text-xs ${getSecondaryTextColor()} mt-1`}>
+                   Accepted formats: PDF, DOC, DOCX, JPG, JPEG, PNG, TXT
+                 </p>
+               </div>
+               <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                 <p className={`text-sm ${getSecondaryTextColor()}`}>
+                   <strong>Note:</strong> In a production environment, files would be uploaded to secure storage. 
+                   For now, only the filename is recorded.
+                 </p>
+               </div>
+             </div>
+             
+             <DialogFooter>
+               <Button variant="outline" onClick={() => setShowUploadModal(false)}>
+                 Cancel
+               </Button>
+             </DialogFooter>
+           </DialogContent>
+         </Dialog>
 
         {/* Review Submissions Modal */}
         <Dialog open={showSubmissionsModal} onOpenChange={setShowSubmissionsModal}>
@@ -791,8 +823,42 @@ export default function HousePointsPage() {
               </Button>
             </DialogFooter>
           </DialogContent>
-        </Dialog>
-      </div>
-    </div>
-  )
-} 
+                 </Dialog>
+
+         {/* QR Code Modal */}
+         <Dialog open={showQRModal} onOpenChange={setShowQRModal}>
+           <DialogContent className={getDialogClasses()}>
+             <DialogHeader>
+               <DialogTitle className={getTextColor()}>QR Code for {selectedActivity?.title}</DialogTitle>
+               <DialogDescription className={getTextColor()}>
+                 Display this QR code for users to scan
+               </DialogDescription>
+             </DialogHeader>
+             
+             <div className="space-y-4">
+               <div className="text-center">
+                 <div className="bg-white p-4 rounded-lg inline-block">
+                   <QrCode className="h-32 w-32 text-black" />
+                 </div>
+                 <p className={`text-sm ${getSecondaryTextColor()} mt-2`}>
+                   QR Code Data: {selectedActivity?.id || 'Activity ID'}
+                 </p>
+               </div>
+               <div className="text-center">
+                 <p className={`text-sm ${getSecondaryTextColor()}`}>
+                   Users can scan this QR code to submit their participation for this activity.
+                 </p>
+               </div>
+             </div>
+             
+             <DialogFooter>
+               <Button variant="outline" onClick={() => setShowQRModal(false)}>
+                 Close
+               </Button>
+             </DialogFooter>
+           </DialogContent>
+         </Dialog>
+       </div>
+     </div>
+   )
+ } 

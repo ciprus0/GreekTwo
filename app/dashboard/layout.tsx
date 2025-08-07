@@ -5,6 +5,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import Image from "next/image"
 import {
+  Award,
   Calendar,
   ChevronDown,
   Clock,
@@ -573,7 +574,7 @@ export default function DashboardLayout({
           {showFeature("Hours") && (
             <SidebarLink
               href={organization?.features?.trackingSystem === 'housePoints' ? "/dashboard/house-points" : "/dashboard/hours"}
-              icon={<Clock className="h-5 w-5" />}
+              icon={organization?.features?.trackingSystem === 'housePoints' ? <Award className="h-5 w-5" /> : <Clock className="h-5 w-5" />}
               isActive={organization?.features?.trackingSystem === 'housePoints' ? isActive("/dashboard/house-points") : isActive("/dashboard/hours")}
               title={organization?.features?.trackingSystem === 'housePoints' ? "House Points" : "Hours"}
               sidebarCollapsed={sidebarCollapsed}
