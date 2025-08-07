@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { api } from '@/lib/supabase-api'
-import EmailService from '@/lib/email-service'
+import emailService from '@/lib/email-service'
 
 export async function POST(request: NextRequest) {
   try {
@@ -31,7 +31,6 @@ export async function POST(request: NextRequest) {
     console.log('Reset URL generated:', resetUrl)
 
     // Send password reset email
-    const emailService = new EmailService()
     const emailResult = await emailService.sendPasswordResetEmail(email, tokenResult.token, resetUrl)
     console.log('Email sending result:', emailResult)
 
