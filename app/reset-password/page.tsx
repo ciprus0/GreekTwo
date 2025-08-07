@@ -283,18 +283,18 @@ export default function ResetPasswordPage() {
               {loading ? "Updating..." : "Update Password"}
             </Button>
             
-            <div className="text-center">
-              <Link href="/login">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="backdrop-blur-sm border border-white/20 text-white hover:bg-white/10 !text-white"
-                >
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back to Login
-                </Button>
-              </Link>
-            </div>
+                         <div className="text-center">
+               <Link href="/login">
+                 <Button
+                   type="button"
+                   variant="outline"
+                   className="backdrop-blur-sm border border-white/20 bg-slate-700/80 text-white hover:bg-slate-600/80 !text-white"
+                 >
+                   <ArrowLeft className="h-4 w-4 mr-2" />
+                   Back to Login
+                 </Button>
+               </Link>
+             </div>
           </form>
           
           <div className="mt-6 p-4 bg-yellow-500/10 backdrop-blur-sm rounded-lg border border-yellow-200/20">

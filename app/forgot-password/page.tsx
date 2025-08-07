@@ -127,7 +127,7 @@ export default function ForgotPasswordPage() {
                              <Link href="/login">
                  <Button
                    variant="outline"
-                   className="w-full backdrop-blur-sm border border-white/20 text-white hover:bg-white/10 !text-white"
+                   className="w-full backdrop-blur-sm border border-white/20 bg-slate-700/80 text-white hover:bg-slate-600/80 !text-white"
                  >
                    <ArrowLeft className="h-4 w-4 mr-2" />
                    Back to Login
@@ -180,18 +180,18 @@ export default function ForgotPasswordPage() {
               {loading ? "Sending..." : "Send Reset Link"}
             </Button>
             
-            <div className="text-center">
-              <Link href="/login">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="backdrop-blur-sm border border-white/20 text-white hover:bg-white/10 !text-white"
-                >
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back to Login
-                </Button>
-              </Link>
-            </div>
+                         <div className="text-center">
+               <Link href="/login">
+                 <Button
+                   type="button"
+                   variant="outline"
+                   className="backdrop-blur-sm border border-white/20 bg-slate-700/80 text-white hover:bg-slate-600/80 !text-white"
+                 >
+                   <ArrowLeft className="h-4 w-4 mr-2" />
+                   Back to Login
+                 </Button>
+               </Link>
+             </div>
           </form>
           
           <div className="mt-6 p-4 bg-blue-500/10 backdrop-blur-sm rounded-lg border border-blue-200/20">
