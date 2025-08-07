@@ -692,64 +692,65 @@ export default function HousePointsPage() {
             )}
           </div>
           
-          <div className="mt-4 flex gap-2">
-            {!isPast && status === 'not_submitted' && !expired && (
-              <>
-                {activity.submission_type === 'qr' ? (
-                  <>
-                    <Button 
-                      onClick={() => handleScanQR(activity)}
-                      disabled={!isActivityStarted(activity)}
-                      className={isActivityStarted(activity) ? getButtonClasses() : "opacity-50 cursor-not-allowed"}
-                      title={!isActivityStarted(activity) ? "Activity has not started yet" : ""}
-                    >
-                      <QrCode className="h-4 w-4 mr-2" />
-                      {isActivityStarted(activity) ? "Scan QR" : "Not Started"}
-                    </Button>
-                    {isAdmin && (
-                      <Button 
-                        onClick={() => handleShowQR(activity)}
-                        className={getButtonClasses()}
-                      >
-                        <QrCode className="h-4 w-4 mr-2" />
-                        Show QR Code
-                      </Button>
-                    )}
-                  </>
-                ) : (
-                  <Button 
-                    onClick={() => handleUploadFile(activity)}
-                    className={getButtonClasses()}
-                  >
-                    <Upload className="h-4 w-4 mr-2" />
-                    Upload File
-                  </Button>
-                )}
-              </>
-            )}
-            {!isPast && status === 'pending' && (
-              <Button variant="outline" disabled>
-                <ClockIcon className="h-4 w-4 mr-2" />
-                Pending Review
-              </Button>
-            )}
-            {!isPast && (status === 'approved' || status === 'auto_approved') && (
-              <Button variant="outline" disabled>
-                <CheckCircle className="h-4 w-4 mr-2" />
-                Completed
-              </Button>
-            )}
-            {!isPast && status === 'rejected' && (
-              <Button variant="outline" disabled>
-                <XCircle className="h-4 w-4 mr-2" />
-                Rejected
-              </Button>
-            )}
-            {!isPast && expired && status === 'not_submitted' && (
-              <Button variant="outline" disabled>
-                Expired
-              </Button>
-            )}
+                     <div className="mt-4 flex gap-2">
+             {!isPast && status === 'not_submitted' && !expired && (
+               <>
+                 {activity.submission_type === 'qr' ? (
+                   <>
+                     <Button 
+                       onClick={() => handleScanQR(activity)}
+                       disabled={!isActivityStarted(activity)}
+                       className={isActivityStarted(activity) ? getButtonClasses() : "opacity-50 cursor-not-allowed"}
+                       title={!isActivityStarted(activity) ? "Activity has not started yet" : ""}
+                     >
+                       <QrCode className="h-4 w-4 mr-2" />
+                       {isActivityStarted(activity) ? "Scan QR" : "Not Started"}
+                     </Button>
+                   </>
+                 ) : (
+                   <Button 
+                     onClick={() => handleUploadFile(activity)}
+                     className={getButtonClasses()}
+                   >
+                     <Upload className="h-4 w-4 mr-2" />
+                     Upload File
+                   </Button>
+                 )}
+               </>
+             )}
+             {!isPast && status === 'pending' && (
+               <Button variant="outline" disabled>
+                 <ClockIcon className="h-4 w-4 mr-2" />
+                 Pending Review
+               </Button>
+             )}
+             {!isPast && (status === 'approved' || status === 'auto_approved') && (
+               <Button variant="outline" disabled>
+                 <CheckCircle className="h-4 w-4 mr-2" />
+                 Completed
+               </Button>
+             )}
+             {!isPast && status === 'rejected' && (
+               <Button variant="outline" disabled>
+                 <XCircle className="h-4 w-4 mr-2" />
+                 Rejected
+               </Button>
+             )}
+             {!isPast && expired && status === 'not_submitted' && (
+               <Button variant="outline" disabled>
+                 Expired
+               </Button>
+             )}
+                           {/* Admin QR Code button - always visible for QR activities */}
+              {!isPast && isAdmin && activity.submission_type === 'qr' && (
+                <Button 
+                  onClick={() => handleShowQR(activity)}
+                  className={getButtonClasses()}
+                >
+                  <QrCode className="h-4 w-4 mr-2" />
+                  Show QR Code
+                </Button>
+              )}
           </div>
         </CardContent>
       </Card>
