@@ -124,15 +124,15 @@ export default function ForgotPasswordPage() {
               >
                 Send Another Email
               </Button>
-              <Link href="/login">
-                <Button
-                  variant="outline"
-                  className="w-full backdrop-blur-sm border border-white/20 text-white hover:bg-white/10"
-                >
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back to Login
-                </Button>
-              </Link>
+                             <Link href="/login">
+                 <Button
+                   variant="outline"
+                   className="w-full backdrop-blur-sm border border-white/20 text-white hover:bg-white/10 !text-white"
+                 >
+                   <ArrowLeft className="h-4 w-4 mr-2" />
+                   Back to Login
+                 </Button>
+               </Link>
             </div>
             <p className="text-xs text-slate-400">
               Need help? Contact your chapter administrator.
