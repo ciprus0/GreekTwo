@@ -14,7 +14,7 @@ import { useToast } from "@/hooks/use-toast"
 import { api, type HousePointActivity, type HousePointSubmission, type Member } from "@/lib/supabase-api"
 import { useTheme } from "@/lib/theme-context"
 import { useTextColors } from "@/components/theme-wrapper"
-import { Calendar, Clock, Users, Plus, Settings, BarChart3, Upload, QrCode, Award, CheckCircle, XCircle, Clock as ClockIcon } from "lucide-react"
+import { Calendar, Clock, Users, Plus, Settings, BarChart3, Upload, QrCode, Award, CheckCircle, XCircle, Clock as ClockIcon, Trash2 } from "lucide-react"
 import QRCode from 'qrcode'
 import QrReader from 'react-qr-reader'
 
@@ -28,6 +28,8 @@ export default function HousePointsPage() {
   const [showSubmissionsModal, setShowSubmissionsModal] = useState(false)
   const [showQRModal, setShowQRModal] = useState(false)
   const [showQRScanner, setShowQRScanner] = useState(false)
+  const [showPastActivities, setShowPastActivities] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [selectedActivity, setSelectedActivity] = useState<HousePointActivity | null>(null)
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>('')
   const [isAdmin, setIsAdmin] = useState(false)
@@ -469,6 +471,66 @@ export default function HousePointsPage() {
     }
   }
 
+  const handleDeleteClick = (activity: HousePointActivity) => {
+    setSelectedActivity(activity)
+    setShowDeleteConfirm(true)
+  }
+
+  const confirmDeleteActivity = async () => {
+    if (!selectedActivity) return
+    
+    try {
+      if (!userProfile || !isAdmin) return
+
+      // First, get all submissions for this activity
+      const activitySubmissions = await api.getHousePointSubmissionsByActivity(selectedActivity.id)
+      
+      // Remove points from users who were awarded points for this activity
+      for (const submission of activitySubmissions) {
+        if (submission.status === 'approved' || submission.status === 'auto_approved') {
+          const userPoints = await api.getHousePointUser(submission.user_id, selectedActivity.organization_id)
+          if (userPoints) {
+            const newTotal = Math.max(0, userPoints.total_points - submission.points_awarded)
+            await api.updateHousePointUser(submission.user_id, selectedActivity.organization_id, {
+              total_points: newTotal
+            })
+          }
+        }
+      }
+
+      // Delete all submissions for this activity
+      for (const submission of activitySubmissions) {
+        await api.deleteHousePointSubmission(submission.id)
+      }
+
+      // Delete the activity
+      await api.deleteHousePointActivity(selectedActivity.id)
+      
+      toast({
+        title: "Success",
+        description: "Activity deleted successfully. All submissions and awarded points have been removed.",
+      })
+      
+      setShowDeleteConfirm(false)
+      setSelectedActivity(null)
+      
+      // Refresh data
+      await Promise.all([
+        fetchActivities(userProfile),
+        fetchUserPoints(userProfile),
+        fetchUserSubmissions(userProfile),
+        fetchPendingSubmissions(userProfile)
+      ])
+    } catch (error) {
+      console.error('Error deleting activity:', error)
+      toast({
+        title: "Error",
+        description: "Failed to delete activity",
+        variant: "destructive",
+      })
+    }
+  }
+
   const formatDate = (dateString: string) => {
     // Fix timezone issue by creating date in local timezone
     const [year, month, day] = dateString.split('-').map(Number)
@@ -489,6 +551,20 @@ export default function HousePointsPage() {
     const now = new Date()
     const startDate = new Date(activity.start_date + 'T' + activity.start_time)
     return now >= startDate
+  }
+
+  const isActivityPast = (activity: HousePointActivity) => {
+    const now = new Date()
+    const endDate = new Date(activity.end_date + 'T' + activity.end_time)
+    return now > endDate
+  }
+
+  const getCurrentActivities = () => {
+    return activities.filter(activity => !isActivityPast(activity))
+  }
+
+  const getPastActivities = () => {
+    return activities.filter(activity => isActivityPast(activity))
   }
 
   const getSubmissionStatus = (activityId: string) => {
@@ -521,18 +597,32 @@ export default function HousePointsPage() {
     }
   }
 
-  const ActivityCard = ({ activity }: { activity: HousePointActivity }) => {
+    const ActivityCard = ({ activity, isPast = false }: { activity: HousePointActivity, isPast?: boolean }) => {
     const status = getSubmissionStatus(activity.id)
     const expired = isActivityExpired(activity)
+    const past = isActivityPast(activity)
 
     return (
       <Card className={getCardClasses()}>
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className={getTextColor()}>{activity.title}</CardTitle>
-            <Badge className={getStatusColor(status)}>
-              {getStatusText(status)}
-            </Badge>
+            <div className="flex items-center gap-2">
+              <Badge className={getStatusColor(status)}>
+                {getStatusText(status)}
+              </Badge>
+                             {isAdmin && !isPast && (
+                 <Button
+                   variant="outline"
+                   size="sm"
+                   onClick={() => handleDeleteClick(activity)}
+                   className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+                   title="Delete Activity"
+                 >
+                   <Trash2 className="h-4 w-4" />
+                 </Button>
+               )}
+            </div>
           </div>
           <CardDescription className={getTextColor()}>
             {activity.description}
@@ -560,62 +650,76 @@ export default function HousePointsPage() {
               )}
               <span>{activity.submission_type === 'qr' ? 'QR Code' : 'File Upload'}</span>
             </div>
+            {isPast && (
+              <div className={`flex items-center gap-2 text-sm ${getSecondaryTextColor()}`}>
+                <CheckCircle className="h-4 w-4" />
+                <span>
+                  {status === 'approved' || status === 'auto_approved' 
+                    ? 'You completed this activity' 
+                    : status === 'pending' 
+                    ? 'You submitted but it was not reviewed' 
+                    : status === 'rejected' 
+                    ? 'Your submission was rejected' 
+                    : 'You did not participate in this activity'}
+                </span>
+              </div>
+            )}
           </div>
           
-                     <div className="mt-4 flex gap-2">
-             {status === 'not_submitted' && !expired && (
-               <>
-                 {activity.submission_type === 'qr' ? (
-                   <>
-                     <Button 
-                       onClick={() => handleScanQR(activity)}
-                       disabled={!isActivityStarted(activity)}
-                       className={isActivityStarted(activity) ? getButtonClasses() : "opacity-50 cursor-not-allowed"}
-                       title={!isActivityStarted(activity) ? "Activity has not started yet" : ""}
-                     >
-                       <QrCode className="h-4 w-4 mr-2" />
-                       {isActivityStarted(activity) ? "Scan QR" : "Not Started"}
-                     </Button>
-                     {isAdmin && (
-                       <Button 
-                         onClick={() => handleShowQR(activity)}
-                         className={getButtonClasses()}
-                       >
-                         <QrCode className="h-4 w-4 mr-2" />
-                         Show QR Code
-                       </Button>
-                     )}
-                   </>
-                 ) : (
-                   <Button 
-                     onClick={() => handleUploadFile(activity)}
-                     className={getButtonClasses()}
-                   >
-                     <Upload className="h-4 w-4 mr-2" />
-                     Upload File
-                   </Button>
-                 )}
-               </>
-             )}
-            {status === 'pending' && (
+          <div className="mt-4 flex gap-2">
+            {!isPast && status === 'not_submitted' && !expired && (
+              <>
+                {activity.submission_type === 'qr' ? (
+                  <>
+                    <Button 
+                      onClick={() => handleScanQR(activity)}
+                      disabled={!isActivityStarted(activity)}
+                      className={isActivityStarted(activity) ? getButtonClasses() : "opacity-50 cursor-not-allowed"}
+                      title={!isActivityStarted(activity) ? "Activity has not started yet" : ""}
+                    >
+                      <QrCode className="h-4 w-4 mr-2" />
+                      {isActivityStarted(activity) ? "Scan QR" : "Not Started"}
+                    </Button>
+                    {isAdmin && (
+                      <Button 
+                        onClick={() => handleShowQR(activity)}
+                        className={getButtonClasses()}
+                      >
+                        <QrCode className="h-4 w-4 mr-2" />
+                        Show QR Code
+                      </Button>
+                    )}
+                  </>
+                ) : (
+                  <Button 
+                    onClick={() => handleUploadFile(activity)}
+                    className={getButtonClasses()}
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    Upload File
+                  </Button>
+                )}
+              </>
+            )}
+            {!isPast && status === 'pending' && (
               <Button variant="outline" disabled>
                 <ClockIcon className="h-4 w-4 mr-2" />
                 Pending Review
               </Button>
             )}
-                         {(status === 'approved' || status === 'auto_approved') && (
-               <Button variant="outline" disabled>
-                 <CheckCircle className="h-4 w-4 mr-2" />
-                 Approved
-               </Button>
-             )}
-            {status === 'rejected' && (
+            {!isPast && (status === 'approved' || status === 'auto_approved') && (
+              <Button variant="outline" disabled>
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Completed
+              </Button>
+            )}
+            {!isPast && status === 'rejected' && (
               <Button variant="outline" disabled>
                 <XCircle className="h-4 w-4 mr-2" />
                 Rejected
               </Button>
             )}
-            {expired && status === 'not_submitted' && (
+            {!isPast && expired && status === 'not_submitted' && (
               <Button variant="outline" disabled>
                 Expired
               </Button>
@@ -678,20 +782,44 @@ export default function HousePointsPage() {
         </div>
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {activities.length === 0 ? (
+          {getCurrentActivities().length === 0 ? (
             <Card className={getCardClasses()}>
               <CardContent className="text-center py-12">
                 <Award className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                <h3 className={`text-lg font-semibold ${getTextColor()}`}>No activities yet</h3>
+                <h3 className={`text-lg font-semibold ${getTextColor()}`}>No current activities</h3>
                 <p className={getSecondaryTextColor()}>Create an activity to get started</p>
               </CardContent>
             </Card>
           ) : (
-            activities.map((activity) => (
+            getCurrentActivities().map((activity) => (
               <ActivityCard key={activity.id} activity={activity} />
             ))
           )}
         </div>
+
+        {/* Past Activities Section */}
+        {getPastActivities().length > 0 && (
+          <div className="mt-8">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className={`text-2xl font-bold ${getTextColor()}`}>Past Activities</h2>
+              <Button
+                variant="outline"
+                onClick={() => setShowPastActivities(!showPastActivities)}
+                className={getButtonClasses()}
+              >
+                {showPastActivities ? 'Hide Past Activities' : 'Show Past Activities'}
+              </Button>
+            </div>
+            
+            {showPastActivities && (
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {getPastActivities().map((activity) => (
+                  <ActivityCard key={activity.id} activity={activity} isPast={true} />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Create Activity Modal */}
         <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
@@ -998,8 +1126,39 @@ export default function HousePointsPage() {
                </Button>
              </DialogFooter>
            </DialogContent>
-         </Dialog>
-       </div>
-     </div>
-   )
- } 
+                   </Dialog>
+
+          {/* Delete Confirmation Modal */}
+          <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+            <DialogContent className={getDialogClasses()}>
+              <DialogHeader>
+                <DialogTitle className={getTextColor()}>Delete Activity</DialogTitle>
+                <DialogDescription className={getTextColor()}>
+                  Are you sure you want to delete "{selectedActivity?.title}"? This action cannot be undone.
+                </DialogDescription>
+              </DialogHeader>
+              
+              <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                <p className={`text-sm ${getSecondaryTextColor()}`}>
+                  <strong>Warning:</strong> This will permanently delete the activity and all associated submissions. 
+                  Any points awarded for this activity will be removed from users' totals.
+                </p>
+              </div>
+              
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setShowDeleteConfirm(false)}>
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={confirmDeleteActivity} 
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                >
+                  Delete Activity
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
+      </div>
+    )
+  } 
