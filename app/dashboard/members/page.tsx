@@ -89,6 +89,7 @@ export default function MembersPage() {
   const [newRoleName, setNewRoleName] = useState("")
   const [newRoleColor, setNewRoleColor] = useState("#64748b")
   const [newRoleIsAdmin, setNewRoleIsAdmin] = useState(false)
+  const [orgSettings, setOrgSettings] = useState<any>(null)
 
   const { toast } = useToast()
   const { theme } = useTheme()
@@ -111,6 +112,43 @@ export default function MembersPage() {
         // Fetch organization data to get roles
         const orgData = await api.getOrganizationById(user.organizationId)
         setOrganization(orgData)
+        
+        // Load organization settings from features column (like mobile app)
+        if (orgData?.features) {
+          setOrgSettings(orgData.features)
+        } else {
+          // Default settings if features column is empty
+          setOrgSettings({
+            roles: DEFAULT_ROLES,
+            features: {
+              gym: true,
+              hours: true,
+              polls: true,
+              study: true,
+              tasks: true,
+              events: true,
+              library: true,
+              messages: true,
+              pledgeSystem: true,
+              announcements: true
+            },
+            requirements: {
+              gym: 0,
+              study: 0,
+              housePoints: 0
+            },
+            trackingSystem: "hours",
+            pledgeExemption: false,
+            pledgeExemptions: {
+              study: false,
+              tasks: false,
+              events: false,
+              library: false,
+              messages: false,
+              announcements: false
+            }
+          })
+        }
 
         // Fetch all members
         const membersList = await api.getMembersByOrganization(user.organizationId)
@@ -310,18 +348,37 @@ export default function MembersPage() {
     if (!newRoleName.trim()) return
 
     try {
+      const roleId = newRoleName.toLowerCase().replace(/\s+/g, '_')
+      const roleExists = orgSettings?.roles?.some(role => role.id === roleId)
+      
+      if (roleExists) {
+        toast({
+          title: "Error",
+          description: "A role with this name already exists",
+          variant: "destructive",
+        })
+        return
+      }
+
       const newRole = {
-        id: Date.now().toString(),
+        id: roleId,
         name: newRoleName.trim(),
         color: newRoleColor,
         isDefault: false,
         isAdmin: newRoleIsAdmin,
       }
 
-      const updatedRoles = [...(organization?.roles || []), newRole]
-      await api.updateOrganization(user.organizationId, { roles: updatedRoles })
+      const updatedOrgSettings = {
+        ...orgSettings,
+        roles: [...(orgSettings?.roles || []), newRole]
+      }
 
-      setOrganization((prev) => (prev ? { ...prev, roles: updatedRoles } : null))
+      // Get organization ID from user metadata (like mobile app)
+      const organizationId = user?.user_metadata?.organization_id || user?.organizationId || user?.organization_id
+      
+      await api.updateOrganization(organizationId, { features: updatedOrgSettings })
+
+      setOrgSettings(updatedOrgSettings)
       setCreateRoleDialogOpen(false)
       setNewRoleName("")
       setNewRoleColor("#64748b")
@@ -353,8 +410,15 @@ export default function MembersPage() {
     }
 
     try {
-      const updatedRoles = organization?.roles?.filter((r) => r.id !== roleId) || []
-      await api.updateOrganization(user.organizationId, { roles: updatedRoles })
+      const updatedOrgSettings = {
+        ...orgSettings,
+        roles: orgSettings?.roles?.filter((r) => r.id !== roleId) || []
+      }
+
+      // Get organization ID from user metadata (like mobile app)
+      const organizationId = user?.user_metadata?.organization_id || user?.organizationId || user?.organization_id
+      
+      await api.updateOrganization(organizationId, { features: updatedOrgSettings })
 
       // Remove this role from all members who have it
       const updatedMembers = members.map((member) => ({
@@ -362,7 +426,7 @@ export default function MembersPage() {
         roles: member.roles?.filter((role) => role !== roleName) || ["New Member"],
       }))
 
-      setOrganization((prev) => (prev ? { ...prev, roles: updatedRoles } : null))
+      setOrgSettings(updatedOrgSettings)
       setMembers(updatedMembers)
 
       toast({
@@ -555,14 +619,14 @@ export default function MembersPage() {
         <TabsList className={`grid w-full ${canManageMembers ? "grid-cols-3" : "grid-cols-1"} ${getTabClasses()}`}>
           <TabsTrigger
             value="members"
-            className={`data-[state=active]:bg-red-600/20 data-[state=active]:text-red-300 ${getTextColor()}`}
+            className={`data-[state=active]:bg-red-600/20 data-[state=active]:text-red-300 data-[state=active]:font-semibold ${getTextColor()}`}
           >
             Members List ({members.length})
           </TabsTrigger>
           {canManageMembers && (
             <TabsTrigger
               value="roles"
-              className={`data-[state=active]:bg-red-600/20 data-[state=active]:text-red-300 ${getTextColor()}`}
+              className={`data-[state=active]:bg-red-600/20 data-[state=active]:text-red-300 data-[state=active]:font-semibold ${getTextColor()}`}
             >
               Manage Roles
             </TabsTrigger>
@@ -570,7 +634,7 @@ export default function MembersPage() {
           {canManageMembers && (
             <TabsTrigger
               value="pending"
-              className={`data-[state=active]:bg-red-600/20 data-[state=active]:text-red-300 ${getTextColor()}`}
+              className={`data-[state=active]:bg-red-600/20 data-[state=active]:text-red-300 data-[state=active]:font-semibold ${getTextColor()}`}
             >
               Pending Approval ({pendingMembers.length})
             </TabsTrigger>
@@ -759,10 +823,10 @@ export default function MembersPage() {
                 </div>
 
                 {/* Custom Roles */}
-                {organization?.roles && organization.roles.length > 0 && (
+                {orgSettings?.roles && orgSettings.roles.length > 0 && (
                   <div className="space-y-3">
                     <h4 className={`font-medium ${getTextColor()} mb-3`}>Custom Roles</h4>
-                    {organization.roles
+                    {orgSettings.roles
                       .filter((role) => !DEFAULT_ROLES.some((dr) => dr.name === role.name))
                       .map((role) => (
                         <div
@@ -970,7 +1034,7 @@ export default function MembersPage() {
                   {selectedMember.roles?.map((roleName) => (
                     <Badge
                       key={roleName}
-                      className="text-sm border flex items-center gap-2"
+                      className="text-sm border flex items-center gap-2 font-medium"
                       style={{
                         backgroundColor: `${getRoleColor(roleName)}20`,
                         borderColor: `${getRoleColor(roleName)}50`,
