@@ -16,6 +16,7 @@ import { useTheme } from "@/lib/theme-context"
 import { useTextColors } from "@/components/theme-wrapper"
 import { Calendar, Clock, Users, Plus, Settings, BarChart3, Upload, QrCode, Award, CheckCircle, XCircle, Clock as ClockIcon } from "lucide-react"
 import QRCode from 'qrcode'
+import QrReader from 'react-qr-reader'
 
 export default function HousePointsPage() {
   const [loading, setLoading] = useState(true)
@@ -26,6 +27,7 @@ export default function HousePointsPage() {
   const [showUploadModal, setShowUploadModal] = useState(false)
   const [showSubmissionsModal, setShowSubmissionsModal] = useState(false)
   const [showQRModal, setShowQRModal] = useState(false)
+  const [showQRScanner, setShowQRScanner] = useState(false)
   const [selectedActivity, setSelectedActivity] = useState<HousePointActivity | null>(null)
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>('')
   const [isAdmin, setIsAdmin] = useState(false)
@@ -146,6 +148,7 @@ export default function HousePointsPage() {
     try {
       const organizationId = user.user_metadata?.organization_id || user.organizationId || user.organization_id
       const activities = await api.getHousePointActivitiesByOrganization(organizationId)
+      console.log('Fetched activities:', activities)
       setActivities(activities)
     } catch (error) {
       console.error('Error fetching activities:', error)
@@ -228,15 +231,19 @@ export default function HousePointsPage() {
       // Generate QR code like mobile app
       const qrCode = `HP_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
       
+      // Fix date handling to avoid timezone issues
       const activityData = {
         ...newActivity,
         points: parseInt(newActivity.points),
         qr_code: qrCode,
+        start_date: newActivity.start_date, // Keep as YYYY-MM-DD format
+        end_date: newActivity.end_date, // Keep as YYYY-MM-DD format
         organization_id: organizationId,
         created_by: userProfile.id
       }
 
-      await api.createHousePointActivity(activityData)
+      const result = await api.createHousePointActivity(activityData)
+      console.log('Activity created:', result)
       
       toast({
         title: "Success",
@@ -283,6 +290,7 @@ export default function HousePointsPage() {
       
       // Generate QR code data URL
       if (activity.qr_code) {
+        console.log('Generating QR code for:', activity.qr_code)
         const dataUrl = await QRCode.toDataURL(activity.qr_code, {
           width: 200,
           margin: 2,
@@ -292,11 +300,15 @@ export default function HousePointsPage() {
           }
         })
         setQrCodeDataUrl(dataUrl)
+      } else {
+        console.error('No QR code found for activity:', activity)
+        setQrCodeDataUrl('')
       }
       
       setShowQRModal(true)
     } catch (error) {
       console.error('Error showing QR code:', error)
+      setQrCodeDataUrl('')
     }
   }
 
@@ -325,23 +337,38 @@ export default function HousePointsPage() {
         return
       }
       
-      // For web, we'll simulate QR scanning with a prompt
-      const qrData = prompt('Enter QR code data:')
-      if (qrData) {
-        // Check if QR code matches the activity
-        if (qrData === activity.qr_code) {
-          await submitSubmission(activity, qrData, 'qr')
-        } else {
-          toast({
-            title: "Invalid QR Code",
-            description: "The scanned QR code does not match this activity.",
-            variant: "destructive",
-          })
-        }
-      }
+      // Open QR scanner
+      setSelectedActivity(activity)
+      setShowQRScanner(true)
     } catch (error) {
-      console.error('Error scanning QR:', error)
+      console.error('Error opening QR scanner:', error)
     }
+  }
+
+  const handleQRScan = async (data: string | null) => {
+    if (!data || !selectedActivity) return
+    
+    setShowQRScanner(false)
+    
+    // Check if QR code matches the activity
+    if (data === selectedActivity.qr_code) {
+      await submitSubmission(selectedActivity, data, 'qr')
+    } else {
+      toast({
+        title: "Invalid QR Code",
+        description: "The scanned QR code does not match this activity.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleQRScanError = (error: any) => {
+    console.error('QR Scan Error:', error)
+    toast({
+      title: "Camera Error",
+      description: "Failed to access camera. Please check permissions.",
+      variant: "destructive",
+    })
   }
 
   const submitSubmission = async (activity: HousePointActivity, submissionData: string, submissionType: 'qr' | 'file') => {
@@ -443,7 +470,9 @@ export default function HousePointsPage() {
   }
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString()
+    // Fix timezone issue by creating date in local timezone
+    const [year, month, day] = dateString.split('-').map(Number)
+    return new Date(year, month - 1, day).toLocaleDateString()
   }
 
   const formatTime = (timeString: string) => {
@@ -929,6 +958,43 @@ export default function HousePointsPage() {
              <DialogFooter>
                <Button variant="outline" onClick={() => setShowQRModal(false)}>
                  Close
+               </Button>
+             </DialogFooter>
+           </DialogContent>
+         </Dialog>
+
+         {/* QR Scanner Modal */}
+         <Dialog open={showQRScanner} onOpenChange={setShowQRScanner}>
+           <DialogContent className={getDialogClasses()}>
+             <DialogHeader>
+               <DialogTitle className={getTextColor()}>Scan QR Code</DialogTitle>
+               <DialogDescription className={getTextColor()}>
+                 Scan the QR code for {selectedActivity?.title}
+               </DialogDescription>
+             </DialogHeader>
+             
+             <div className="space-y-4">
+               <div className="text-center">
+                 <div className="bg-black p-4 rounded-lg inline-block">
+                   <QrReader
+                     delay={300}
+                     onError={handleQRScanError}
+                     onScan={handleQRScan}
+                     style={{ width: '300px', height: '300px' }}
+                     facingMode="environment"
+                   />
+                 </div>
+               </div>
+               <div className="text-center">
+                 <p className={`text-sm ${getSecondaryTextColor()}`}>
+                   Point your camera at the QR code to scan
+                 </p>
+               </div>
+             </div>
+             
+             <DialogFooter>
+               <Button variant="outline" onClick={() => setShowQRScanner(false)}>
+                 Cancel
                </Button>
              </DialogFooter>
            </DialogContent>
