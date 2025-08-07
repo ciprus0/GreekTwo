@@ -13,8 +13,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    console.log('Password reset request for email:', email)
+
     // Create password reset token
     const tokenResult = await api.createPasswordResetToken(email)
+    console.log('Token creation result:', tokenResult)
     
     if (!tokenResult.success) {
       return NextResponse.json(
@@ -25,10 +28,12 @@ export async function POST(request: NextRequest) {
 
     // Generate reset URL
     const resetUrl = `${request.nextUrl.origin}/reset-password?token=${tokenResult.token}`
+    console.log('Reset URL generated:', resetUrl)
 
     // Send password reset email
     const emailService = new EmailService()
-    const emailResult = await emailService.sendPasswordResetEmail(email, resetUrl)
+    const emailResult = await emailService.sendPasswordResetEmail(email, tokenResult.token, resetUrl)
+    console.log('Email sending result:', emailResult)
 
     if (!emailResult.success) {
       console.error('Failed to send password reset email:', emailResult.error)
