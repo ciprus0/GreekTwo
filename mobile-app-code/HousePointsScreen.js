@@ -21,6 +21,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import QRCode from 'react-native-qrcode-svg';
+import { calculateProgressForType, getTypeEmoji, getTypeColor, getTypeDisplayText } from '../../lib/hourRequirementsUtils';
 
 const { width } = Dimensions.get('window');
 
@@ -39,6 +40,7 @@ export default function HousePointsScreen({ navigation }) {
   const [userProfile, setUserProfile] = useState(null);
   const [organizationData, setOrganizationData] = useState(null);
   const [requirement, setRequirement] = useState(0);
+  const [housePointsProgress, setHousePointsProgress] = useState({ totalCompleted: 0, totalRequired: 0, hasRequirements: false, requirements: [] });
   
   // Create activity form state
   const [newActivity, setNewActivity] = useState({
@@ -75,6 +77,8 @@ export default function HousePointsScreen({ navigation }) {
 
   useEffect(() => {
     if (user) {
+      // Clear cache to ensure fresh data
+      AsyncStorage.removeItem(CACHE_KEY);
       loadData();
     }
   }, [user]);
@@ -100,6 +104,7 @@ export default function HousePointsScreen({ navigation }) {
         setUserPoints(cache.userPoints || 0);
         setUserSubmissions(cache.userSubmissions || {});
         setRequirement(cache.requirement || 0);
+        setHousePointsProgress(cache.housePointsProgress || { totalCompleted: 0, totalRequired: 0, hasRequirements: false, requirements: [] });
       }
 
       // Always fetch fresh data - run in sequence since some depend on userProfile
@@ -109,6 +114,7 @@ export default function HousePointsScreen({ navigation }) {
       await fetchUserPoints();
       await fetchUserSubmissions();
       await fetchRequirement();
+      await fetchHousePointsProgress();
 
       // Cache the fresh data
       const cacheData = {
@@ -116,6 +122,7 @@ export default function HousePointsScreen({ navigation }) {
         userPoints,
         userSubmissions,
         requirement,
+        housePointsProgress,
         timestamp: Date.now()
       };
       AsyncStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
@@ -146,43 +153,56 @@ export default function HousePointsScreen({ navigation }) {
   };
 
   const fetchOrganizationData = async () => {
-    if (userProfile?.organization_id) {
+    try {
+      const organizationId = user?.user_metadata?.organization_id || user?.organization_id;
+      if (!organizationId) return;
+
       const { data, error } = await supabase
         .from('organizations')
         .select('name, features')
-        .eq('id', userProfile.organization_id)
+        .eq('id', organizationId)
         .single();
 
       if (!error && data) {
         setOrganizationData(data);
       }
+    } catch (error) {
+      console.error('Error fetching organization data:', error);
     }
   };
 
   const fetchActivities = async () => {
-    if (userProfile?.organization_id) {
+    try {
+      const organizationId = user?.user_metadata?.organization_id || user?.organization_id;
+      if (!organizationId) return;
+
       const { data, error } = await supabase
         .from('house_points_activities')
         .select(`
           *,
           created_by_member:members(name)
         `)
-        .eq('organization_id', userProfile.organization_id)
+        .eq('organization_id', organizationId)
         .order('created_at', { ascending: false });
 
       if (!error && data) {
         setActivities(data);
       }
+    } catch (error) {
+      console.error('Error fetching activities:', error);
     }
   };
 
   const fetchUserPoints = async () => {
-    if (userProfile?.organization_id) {
+    try {
+      const organizationId = user?.user_metadata?.organization_id || user?.organization_id;
+      if (!organizationId) return;
+
       const { data, error } = await supabase
         .from('house_points_totals')
         .select('total_points')
         .eq('user_id', user.id)
-        .eq('organization_id', userProfile.organization_id)
+        .eq('organization_id', organizationId)
         .single();
 
       if (!error && data) {
@@ -190,11 +210,17 @@ export default function HousePointsScreen({ navigation }) {
       } else {
         setUserPoints(0);
       }
+    } catch (error) {
+      console.error('Error fetching user points:', error);
+      setUserPoints(0);
     }
   };
 
   const fetchUserSubmissions = async () => {
-    if (userProfile?.organization_id) {
+    try {
+      const organizationId = user?.user_metadata?.organization_id || user?.organization_id;
+      if (!organizationId) return;
+
       const { data, error } = await supabase
         .from('house_points_submissions')
         .select('activity_id, status')
@@ -207,25 +233,83 @@ export default function HousePointsScreen({ navigation }) {
         });
         setUserSubmissions(submissions);
       }
+    } catch (error) {
+      console.error('Error fetching user submissions:', error);
     }
   };
 
   const fetchRequirement = async () => {
-    if (userProfile?.organization_id) {
+    try {
+      const organizationId = user?.user_metadata?.organization_id || user?.organization_id;
+      if (!organizationId) return;
+
       const { data, error } = await supabase
         .from('organizations')
         .select('features')
-        .eq('id', userProfile.organization_id)
+        .eq('id', organizationId)
         .single();
 
       if (!error && data?.features?.requirements?.housePoints) {
         setRequirement(data.features.requirements.housePoints);
       }
+    } catch (error) {
+      console.error('Error fetching requirement:', error);
+    }
+  };
+
+  const fetchHousePointsProgress = async () => {
+    try {
+      if (!user?.id) return;
+
+      const organizationId = user?.user_metadata?.organization_id || user?.organization_id;
+      if (!organizationId) return;
+
+      // Get organization hour requirements
+      const { data: orgData, error: orgError } = await supabase
+        .from('organizations')
+        .select('hour_requirements')
+        .eq('id', organizationId)
+        .single();
+
+      if (orgError) throw orgError;
+
+      const requirements = orgData?.hour_requirements || [];
+
+      // Fetch house points data
+      const { data: housePointsData, error: housePointsError } = await supabase
+        .from("house_points_totals")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("organization_id", organizationId)
+        .single();
+
+      if (housePointsError && housePointsError.code !== 'PGRST116') throw housePointsError;
+
+      const progress = calculateProgressForType([housePointsData], requirements, 'housePoints', user.id);
+      setHousePointsProgress(progress);
+    } catch (error) {
+      console.error("Error fetching house points progress:", error);
     }
   };
 
   const handleScanQR = async (activity) => {
     setSelectedActivity(activity);
+    
+    // Check camera permission first
+    if (!permission) {
+      const permissionResult = await requestPermission();
+      if (!permissionResult.granted) {
+        Alert.alert('Camera Permission Required', 'Please grant camera permission to scan QR codes.');
+        return;
+      }
+    } else if (!permission.granted) {
+      const permissionResult = await requestPermission();
+      if (!permissionResult.granted) {
+        Alert.alert('Camera Permission Required', 'Please grant camera permission to scan QR codes.');
+        return;
+      }
+    }
+    
     setShowScanner(true);
   };
 
@@ -272,7 +356,8 @@ export default function HousePointsScreen({ navigation }) {
     if (!result.canceled) {
       // Upload file to Supabase storage
       const fileName = `house_points_${selectedActivity.id}_${user.id}_${Date.now()}.jpg`;
-      const filePath = `${userProfile.organization_id}/house_points/${fileName}`;
+      const organizationId = user?.user_metadata?.organization_id || user?.organization_id;
+      const filePath = `${organizationId}/house_points/${fileName}`;
       
       const response = await fetch(result.assets[0].uri);
       const blob = await response.blob();
@@ -370,7 +455,7 @@ export default function HousePointsScreen({ navigation }) {
     return now > endDate;
   };
 
-  const progressPercentage = requirement > 0 ? Math.min((userPoints / requirement) * 100, 100) : 0;
+
 
   // Create activity functions
   const createActivity = async () => {
@@ -400,7 +485,7 @@ export default function HousePointsScreen({ navigation }) {
           end_time: newActivity.end_time || null,
           submission_type: newActivity.submission_type,
           qr_code: qrCode,
-          organization_id: userProfile.organization_id,
+          organization_id: user?.user_metadata?.organization_id || user?.organization_id,
           created_by: user.id
         });
 
@@ -432,21 +517,26 @@ export default function HousePointsScreen({ navigation }) {
 
   // Admin submission functions
   const fetchPendingSubmissions = async () => {
-    if (!userProfile?.organization_id) return;
+    try {
+      const organizationId = user?.user_metadata?.organization_id || user?.organization_id;
+      if (!organizationId) return;
 
-    const { data, error } = await supabase
-      .from('house_points_submissions')
-      .select(`
-        *,
-        activity:house_points_activities(title, points),
-        member:members(name)
-      `)
-      .eq('status', 'pending')
-      .eq('activity.organization_id', userProfile.organization_id)
-      .order('created_at', { ascending: false });
+      const { data, error } = await supabase
+        .from('house_points_submissions')
+        .select(`
+          *,
+          activity:house_points_activities(title, points),
+          member:members(name)
+        `)
+        .eq('status', 'pending')
+        .eq('activity.organization_id', organizationId)
+        .order('created_at', { ascending: false });
 
-    if (!error && data) {
-      setPendingSubmissions(data);
+      if (!error && data) {
+        setPendingSubmissions(data);
+      }
+    } catch (error) {
+      console.error('Error fetching pending submissions:', error);
     }
   };
 
@@ -591,32 +681,59 @@ export default function HousePointsScreen({ navigation }) {
               <Text style={[styles.pointsLabel, { color: colors.textSecondary }]}>Your Points</Text>
               <Text style={[styles.pointsValue, { color: colors.text }]}>{userPoints}</Text>
             </View>
-            {requirement > 0 && (
-              <View>
-                <Text style={[styles.pointsLabel, { color: colors.textSecondary }]}>Required</Text>
-                <Text style={[styles.pointsValue, { color: colors.text }]}>{requirement}</Text>
-              </View>
-            )}
-          </View>
-          
-          {requirement > 0 && (
-            <View style={styles.progressContainer}>
-              <View style={[styles.progressBar, { backgroundColor: colors.border }]}>
-                <View 
-                  style={[
-                    styles.progressFill, 
-                    { 
-                      backgroundColor: colors.primary,
-                      width: `${progressPercentage}%`
-                    }
-                  ]} 
-                />
-              </View>
-              <Text style={[styles.progressText, { color: colors.textSecondary }]}>
-                {Math.round(progressPercentage)}% Complete
-              </Text>
+                      {housePointsProgress.hasRequirements && (
+            <View>
+              <Text style={[styles.pointsLabel, { color: colors.textSecondary }]}>Required</Text>
+              <Text style={[styles.pointsValue, { color: colors.text }]}>{housePointsProgress.totalRequired.toFixed(1)}</Text>
             </View>
           )}
+        </View>
+        
+        {housePointsProgress.hasRequirements && (
+          <View style={styles.progressContainer}>
+            <View style={[styles.progressBar, { backgroundColor: colors.border }]}>
+              <View 
+                style={[
+                  styles.progressFill, 
+                  { 
+                    backgroundColor: colors.primary,
+                    width: `${Math.min((housePointsProgress.totalCompleted / housePointsProgress.totalRequired) * 100, 100)}%`
+                  }
+                ]} 
+              />
+            </View>
+            <Text style={[styles.progressText, { color: colors.textSecondary }]}>
+              {Math.round(Math.min((housePointsProgress.totalCompleted / housePointsProgress.totalRequired) * 100, 100))}% Complete
+            </Text>
+          </View>
+        )}
+        
+        {/* Show individual requirements if there are multiple */}
+        {housePointsProgress.hasRequirements && housePointsProgress.requirements.length > 1 && (
+          <View style={{ marginTop: 12 }}>
+            {housePointsProgress.requirements.map((req) => (
+              <View key={req.id} style={{ marginBottom: 8 }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <Text style={[styles.pointsLabel, { color: colors.textSecondary, fontSize: 12 }]}>{req.name}</Text>
+                  <Text style={[styles.pointsLabel, { color: colors.textSecondary, fontSize: 12 }]}>
+                    {req.completed.toFixed(1)}/{req.required.toFixed(1)} points
+                  </Text>
+                </View>
+                <View style={[styles.progressBar, { backgroundColor: colors.border, height: 6 }]}>
+                  <View 
+                    style={[
+                      styles.progressFill, 
+                      { 
+                        backgroundColor: colors.primary,
+                        width: `${Math.min((req.completed / req.required) * 100, 100)}%`
+                      }
+                    ]} 
+                  />
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
         </View>
 
         {/* Activities */}

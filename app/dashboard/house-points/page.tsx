@@ -15,6 +15,7 @@ import { api, type HousePointActivity, type HousePointSubmission, type Member } 
 import { useTheme } from "@/lib/theme-context"
 import { useTextColors } from "@/components/theme-wrapper"
 import { Calendar, Clock, Users, Plus, Settings, BarChart3, Upload, QrCode, Award, CheckCircle, XCircle, Clock as ClockIcon } from "lucide-react"
+import QRCode from 'qrcode'
 
 export default function HousePointsPage() {
   const [loading, setLoading] = useState(true)
@@ -26,6 +27,7 @@ export default function HousePointsPage() {
   const [showSubmissionsModal, setShowSubmissionsModal] = useState(false)
   const [showQRModal, setShowQRModal] = useState(false)
   const [selectedActivity, setSelectedActivity] = useState<HousePointActivity | null>(null)
+  const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>('')
   const [isAdmin, setIsAdmin] = useState(false)
   const [userProfile, setUserProfile] = useState<any>(null)
   const [organizationData, setOrganizationData] = useState<any>(null)
@@ -223,9 +225,13 @@ export default function HousePointsPage() {
 
       const organizationId = userProfile.user_metadata?.organization_id || userProfile.organizationId || userProfile.organization_id
       
+      // Generate QR code like mobile app
+      const qrCode = `HP_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+      
       const activityData = {
         ...newActivity,
         points: parseInt(newActivity.points),
+        qr_code: qrCode,
         organization_id: organizationId,
         created_by: userProfile.id
       }
@@ -274,6 +280,20 @@ export default function HousePointsPage() {
   const handleShowQR = async (activity: HousePointActivity) => {
     try {
       setSelectedActivity(activity)
+      
+      // Generate QR code data URL
+      if (activity.qr_code) {
+        const dataUrl = await QRCode.toDataURL(activity.qr_code, {
+          width: 200,
+          margin: 2,
+          color: {
+            dark: '#000000',
+            light: '#FFFFFF'
+          }
+        })
+        setQrCodeDataUrl(dataUrl)
+      }
+      
       setShowQRModal(true)
     } catch (error) {
       console.error('Error showing QR code:', error)
@@ -282,10 +302,42 @@ export default function HousePointsPage() {
 
   const handleScanQR = async (activity: HousePointActivity) => {
     try {
+      // Check if activity has started
+      const now = new Date()
+      const startDate = new Date(activity.start_date + 'T' + activity.start_time)
+      const endDate = new Date(activity.end_date + 'T' + activity.end_time)
+      
+      if (now < startDate) {
+        toast({
+          title: "Activity Not Started",
+          description: "This activity has not started yet.",
+          variant: "destructive",
+        })
+        return
+      }
+      
+      if (now > endDate) {
+        toast({
+          title: "Activity Expired",
+          description: "This activity has already ended.",
+          variant: "destructive",
+        })
+        return
+      }
+      
       // For web, we'll simulate QR scanning with a prompt
       const qrData = prompt('Enter QR code data:')
       if (qrData) {
-        await submitSubmission(activity, qrData, 'qr')
+        // Check if QR code matches the activity
+        if (qrData === activity.qr_code) {
+          await submitSubmission(activity, qrData, 'qr')
+        } else {
+          toast({
+            title: "Invalid QR Code",
+            description: "The scanned QR code does not match this activity.",
+            variant: "destructive",
+          })
+        }
       }
     } catch (error) {
       console.error('Error scanning QR:', error)
@@ -309,7 +361,9 @@ export default function HousePointsPage() {
       
       toast({
         title: "Success",
-        description: "Submission submitted successfully",
+        description: submissionType === 'qr' 
+          ? `QR code scanned successfully! Submission pending admin approval.` 
+          : "File uploaded successfully! Submission pending admin approval.",
       })
       
       setShowUploadModal(false)
@@ -402,6 +456,12 @@ export default function HousePointsPage() {
     return now > endDate
   }
 
+  const isActivityStarted = (activity: HousePointActivity) => {
+    const now = new Date()
+    const startDate = new Date(activity.start_date + 'T' + activity.start_time)
+    return now >= startDate
+  }
+
   const getSubmissionStatus = (activityId: string) => {
     const submission = userSubmissions[activityId]
     if (!submission) return 'not_submitted'
@@ -410,7 +470,9 @@ export default function HousePointsPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'approved': return 'bg-green-500'
+      case 'approved': 
+      case 'auto_approved': 
+        return 'bg-green-500'
       case 'pending': return 'bg-yellow-500'
       case 'rejected': return 'bg-red-500'
       case 'not_submitted': return 'bg-gray-500'
@@ -420,7 +482,9 @@ export default function HousePointsPage() {
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case 'approved': return 'Approved'
+      case 'approved': 
+      case 'auto_approved': 
+        return 'Approved'
       case 'pending': return 'Pending'
       case 'rejected': return 'Rejected'
       case 'not_submitted': return 'Not Submitted'
@@ -474,21 +538,22 @@ export default function HousePointsPage() {
                <>
                  {activity.submission_type === 'qr' ? (
                    <>
-                     {isAdmin ? (
+                     <Button 
+                       onClick={() => handleScanQR(activity)}
+                       disabled={!isActivityStarted(activity)}
+                       className={isActivityStarted(activity) ? getButtonClasses() : "opacity-50 cursor-not-allowed"}
+                       title={!isActivityStarted(activity) ? "Activity has not started yet" : ""}
+                     >
+                       <QrCode className="h-4 w-4 mr-2" />
+                       {isActivityStarted(activity) ? "Scan QR" : "Not Started"}
+                     </Button>
+                     {isAdmin && (
                        <Button 
                          onClick={() => handleShowQR(activity)}
                          className={getButtonClasses()}
                        >
                          <QrCode className="h-4 w-4 mr-2" />
                          Show QR Code
-                       </Button>
-                     ) : (
-                       <Button 
-                         onClick={() => handleScanQR(activity)}
-                         className={getButtonClasses()}
-                       >
-                         <QrCode className="h-4 w-4 mr-2" />
-                         Scan QR
                        </Button>
                      )}
                    </>
@@ -509,12 +574,12 @@ export default function HousePointsPage() {
                 Pending Review
               </Button>
             )}
-            {status === 'approved' && (
-              <Button variant="outline" disabled>
-                <CheckCircle className="h-4 w-4 mr-2" />
-                Approved
-              </Button>
-            )}
+                         {(status === 'approved' || status === 'auto_approved') && (
+               <Button variant="outline" disabled>
+                 <CheckCircle className="h-4 w-4 mr-2" />
+                 Approved
+               </Button>
+             )}
             {status === 'rejected' && (
               <Button variant="outline" disabled>
                 <XCircle className="h-4 w-4 mr-2" />
@@ -838,15 +903,25 @@ export default function HousePointsPage() {
              <div className="space-y-4">
                <div className="text-center">
                  <div className="bg-white p-4 rounded-lg inline-block">
-                   <QrCode className="h-32 w-32 text-black" />
+                   {qrCodeDataUrl ? (
+                     <img 
+                       src={qrCodeDataUrl} 
+                       alt="QR Code" 
+                       className="w-48 h-48"
+                     />
+                   ) : (
+                     <div className="w-48 h-48 bg-gray-200 flex items-center justify-center">
+                       <QrCode className="h-32 w-32 text-gray-400" />
+                     </div>
+                   )}
                  </div>
-                 <p className={`text-sm ${getSecondaryTextColor()} mt-2`}>
-                   QR Code Data: {selectedActivity?.id || 'Activity ID'}
+                 <p className={`text-sm ${getSecondaryTextColor()} mt-2 font-mono`}>
+                   {selectedActivity?.qr_code || 'QR Code Data'}
                  </p>
                </div>
                <div className="text-center">
                  <p className={`text-sm ${getSecondaryTextColor()}`}>
-                   Users can scan this QR code to submit their participation for this activity.
+                   Members can scan this code to earn {selectedActivity?.points} points
                  </p>
                </div>
              </div>
