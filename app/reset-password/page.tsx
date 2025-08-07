@@ -32,9 +32,8 @@ export default function ResetPasswordPage() {
 
   useEffect(() => {
     const tokenParam = searchParams.get('token')
-    const emailParam = searchParams.get('email')
     
-    if (!tokenParam || !emailParam) {
+    if (!tokenParam) {
       toast({
         title: "Error",
         description: "Invalid reset link. Please request a new password reset.",
@@ -45,30 +44,30 @@ export default function ResetPasswordPage() {
     }
 
     setToken(tokenParam)
-    setEmail(emailParam)
 
-    // Verify the user exists
-    verifyUser(emailParam)
+    // Validate the token
+    validateToken(tokenParam)
   }, [searchParams])
 
-  const verifyUser = async (email: string) => {
+  const validateToken = async (token: string) => {
     try {
-      const userData = await api.getMemberByEmail(email)
-      if (!userData) {
+      const validation = await api.validatePasswordResetToken(token)
+      if (!validation.success) {
         toast({
           title: "Error",
-          description: "User not found. Please request a new password reset.",
+          description: validation.error || "Invalid or expired reset token",
           variant: "destructive",
         })
         router.push('/forgot-password')
         return
       }
-      setUser(userData)
+      setUser(validation.user)
+      setEmail(validation.user.email)
     } catch (error) {
-      console.error('Error verifying user:', error)
+      console.error('Error validating token:', error)
       toast({
         title: "Error",
-        description: "Failed to verify user. Please try again.",
+        description: "Failed to validate reset token. Please try again.",
         variant: "destructive",
       })
       router.push('/forgot-password')
@@ -108,8 +107,25 @@ export default function ResetPasswordPage() {
     try {
       setLoading(true)
 
-      // Update the user's password
-      await api.updateMember(user.id, { password })
+      // Call the reset password API
+      const response = await fetch('/api/auth/reset-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ token, newPassword: password }),
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        toast({
+          title: "Error",
+          description: result.error || "Failed to reset password",
+          variant: "destructive",
+        })
+        return
+      }
 
       setSuccess(true)
       

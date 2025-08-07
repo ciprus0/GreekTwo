@@ -4021,5 +4021,199 @@ export const api = {
     return true
   },
 
+  // Password Reset Token Functions
+  generateResetToken(): string {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
+    let token = ''
+    for (let i = 0; i < 32; i++) {
+      token += chars.charAt(Math.floor(Math.random() * chars.length))
+    }
+    return token
+  },
+
+  async createPasswordResetToken(email: string): Promise<{ success: boolean; error?: string; token?: string }> {
+    try {
+      // Find the user by email
+      const { data: user, error: userError } = await supabase
+        .from('members')
+        .select('id, email, name')
+        .eq('email', email.trim().toLowerCase())
+        .single()
+
+      if (userError || !user) {
+        return { 
+          success: false, 
+          error: 'No account found with this email address' 
+        }
+      }
+
+      // Generate a unique token
+      const token = this.generateResetToken()
+      
+      // Set expiration (1 hour from now)
+      const expiresAt = new Date()
+      expiresAt.setHours(expiresAt.getHours() + 1)
+
+      // Store the token in the database
+      const { error: tokenError } = await supabase
+        .from('password_reset_tokens')
+        .insert({
+          user_id: user.id,
+          token: token,
+          expires_at: expiresAt.toISOString()
+        })
+
+      if (tokenError) {
+        console.error('Error creating reset token:', tokenError)
+        return { 
+          success: false, 
+          error: 'Failed to create reset token' 
+        }
+      }
+
+      return { 
+        success: true, 
+        token: token
+      }
+
+    } catch (error) {
+      console.error('Error in createPasswordResetToken:', error)
+      return { 
+        success: false, 
+        error: 'An unexpected error occurred' 
+      }
+    }
+  },
+
+  async validatePasswordResetToken(token: string): Promise<{ success: boolean; error?: string; user?: any; tokenId?: string }> {
+    try {
+      const { data: resetToken, error } = await supabase
+        .from('password_reset_tokens')
+        .select(`
+          id,
+          user_id,
+          expires_at,
+          used_at,
+          members!inner(id, email, name)
+        `)
+        .eq('token', token)
+        .single()
+
+      if (error || !resetToken) {
+        return { 
+          success: false, 
+          error: 'Invalid or expired reset token' 
+        }
+      }
+
+      // Check if token is expired
+      if (new Date(resetToken.expires_at) < new Date()) {
+        return { 
+          success: false, 
+          error: 'Reset token has expired' 
+        }
+      }
+
+      // Check if token has already been used
+      if (resetToken.used_at) {
+        return { 
+          success: false, 
+          error: 'Reset token has already been used' 
+        }
+      }
+
+      return { 
+        success: true, 
+        user: resetToken.members,
+        tokenId: resetToken.id
+      }
+
+    } catch (error) {
+      console.error('Error in validatePasswordResetToken:', error)
+      return { 
+        success: false, 
+        error: 'An unexpected error occurred' 
+      }
+    }
+  },
+
+  async resetPasswordWithToken(token: string, newPassword: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      // Validate the token first
+      const validation = await this.validatePasswordResetToken(token)
+      
+      if (!validation.success) {
+        return validation
+      }
+
+      // Hash the new password
+      const hashedPassword = await hashPassword(newPassword)
+
+      // Update the user's password
+      const { error: updateError } = await supabase
+        .from('members')
+        .update({ password_hash: hashedPassword })
+        .eq('id', validation.user.id)
+
+      if (updateError) {
+        console.error('Error updating password:', updateError)
+        return { 
+          success: false, 
+          error: 'Failed to update password' 
+        }
+      }
+
+      // Mark the token as used
+      const { error: tokenError } = await supabase
+        .from('password_reset_tokens')
+        .update({ used_at: new Date().toISOString() })
+        .eq('id', validation.tokenId)
+
+      if (tokenError) {
+        console.error('Error marking token as used:', tokenError)
+        // Don't fail the password reset if we can't mark the token as used
+      }
+
+      return { 
+        success: true
+      }
+
+    } catch (error) {
+      console.error('Error in resetPasswordWithToken:', error)
+      return { 
+        success: false, 
+        error: 'An unexpected error occurred' 
+      }
+    }
+  },
+
+  async cleanupExpiredPasswordResetTokens(): Promise<{ success: boolean; error?: string }> {
+    try {
+      const { data, error } = await supabase
+        .from('password_reset_tokens')
+        .delete()
+        .lt('expires_at', new Date().toISOString())
+
+      if (error) {
+        console.error('Error cleaning up expired tokens:', error)
+        return { 
+          success: false, 
+          error: 'Failed to clean up expired tokens' 
+        }
+      }
+
+      return { 
+        success: true
+      }
+
+    } catch (error) {
+      console.error('Error in cleanupExpiredPasswordResetTokens:', error)
+      return { 
+        success: false, 
+        error: 'An unexpected error occurred' 
+      }
+    }
+  },
+
   supabase, // Export the supabase client for direct access
 }

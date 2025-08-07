@@ -39,30 +39,29 @@ export default function ForgotPasswordPage() {
     try {
       setLoading(true)
 
-      // Check if user exists
-      const user = await api.getMemberByEmail(email)
-      if (!user) {
+      // Call the password reset API
+      const response = await fetch('/api/auth/password-reset', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
         toast({
           title: "Error",
-          description: "No account found with this email address",
+          description: result.error || "Failed to send password reset email",
           variant: "destructive",
         })
         return
       }
 
+      // Get user info for display
+      const user = await api.getMemberByEmail(email)
       setUserFound(user)
-
-      // Generate reset token
-      const resetToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
-      const resetUrl = `${window.location.origin}/reset-password?token=${resetToken}&email=${encodeURIComponent(email)}`
-
-      // Store reset token in database (you'll need to add this to your API)
-      // For now, we'll simulate the email sending
-      console.log('Reset URL:', resetUrl)
-
-      // Send password reset email
-      // const emailService = require('@/lib/email-service').default
-      // await emailService.sendPasswordResetEmail(email, resetToken, resetUrl)
 
       setEmailSent(true)
       
