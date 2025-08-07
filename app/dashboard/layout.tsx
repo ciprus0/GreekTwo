@@ -572,13 +572,13 @@ export default function DashboardLayout({
           )}
           {showFeature("Hours") && (
             <SidebarLink
-              href="/dashboard/hours"
+              href={organization?.features?.trackingSystem === 'housePoints' ? "/dashboard/house-points" : "/dashboard/hours"}
               icon={<Clock className="h-5 w-5" />}
-              isActive={isActive("/dashboard/hours")}
-              title="Hours"
+              isActive={organization?.features?.trackingSystem === 'housePoints' ? isActive("/dashboard/house-points") : isActive("/dashboard/hours")}
+              title={organization?.features?.trackingSystem === 'housePoints' ? "House Points" : "Hours"}
               sidebarCollapsed={sidebarCollapsed}
             >
-              Hours
+              {organization?.features?.trackingSystem === 'housePoints' ? "House Points" : "Hours"}
             </SidebarLink>
           )}
           {showFeature("Events") && (

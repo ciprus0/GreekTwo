@@ -634,9 +634,14 @@ export default function DashboardPage() {
             <Card className={getCardClasses()}>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <div className="space-y-1">
-                  <CardTitle className={`text-base md:text-lg font-medium ${getTextColor()}`}>Hours Progress</CardTitle>
+                  <CardTitle className={`text-base md:text-lg font-medium ${getTextColor()}`}>
+                    {organization?.features?.trackingSystem === 'housePoints' ? 'House Points Progress' : 'Hours Progress'}
+                  </CardTitle>
                   <CardDescription className={`text-sm ${getSecondaryTextColor()}`}>
-                    Track your progress across all hour requirements
+                    {organization?.features?.trackingSystem === 'housePoints' 
+                      ? 'Track your progress across all house point requirements'
+                      : 'Track your progress across all hour requirements'
+                    }
                   </CardDescription>
                 </div>
                 <Clock className="h-5 w-5 text-red-400 flex-shrink-0" />
@@ -670,7 +675,7 @@ export default function DashboardPage() {
               </CardContent>
               <CardFooter>
                 <Link
-                  href="/dashboard/hours"
+                  href={organization?.features?.trackingSystem === 'housePoints' ? "/dashboard/house-points" : "/dashboard/hours"}
                   className={`text-xs ${getAccentTextColor()} hover:underline flex items-center transition-colors`}
                 >
                   View Details

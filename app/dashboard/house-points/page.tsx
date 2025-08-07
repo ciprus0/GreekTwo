@@ -68,6 +68,20 @@ export default function HousePointsPage() {
       const user = JSON.parse(userStr)
       setUserProfile(user)
 
+      // Get organization ID from user metadata (like mobile app)
+      const organizationId = user.user_metadata?.organization_id || user.organizationId || user.organization_id
+      
+      if (!organizationId) {
+        console.error('No organization ID found')
+        toast({
+          title: "Error",
+          description: "No organization found",
+          variant: "destructive",
+        })
+        setLoading(false)
+        return
+      }
+
       // Load all data in parallel
       await Promise.all([
         fetchUserProfile(user),
@@ -115,7 +129,8 @@ export default function HousePointsPage() {
 
   const fetchOrganizationData = async (user: any) => {
     try {
-      const org = await api.getOrganizationById(user.organization_id)
+      const organizationId = user.user_metadata?.organization_id || user.organizationId || user.organization_id
+      const org = await api.getOrganizationById(organizationId)
       if (org) {
         setOrganizationData(org)
       }
@@ -126,7 +141,8 @@ export default function HousePointsPage() {
 
   const fetchActivities = async (user: any) => {
     try {
-      const activities = await api.getHousePointActivitiesByOrganization(user.organization_id)
+      const organizationId = user.user_metadata?.organization_id || user.organizationId || user.organization_id
+      const activities = await api.getHousePointActivitiesByOrganization(organizationId)
       setActivities(activities)
     } catch (error) {
       console.error('Error fetching activities:', error)
@@ -135,7 +151,8 @@ export default function HousePointsPage() {
 
   const fetchUserPoints = async (user: any) => {
     try {
-      const userPoints = await api.getHousePointUser(user.id, user.organization_id)
+      const organizationId = user.user_metadata?.organization_id || user.organizationId || user.organization_id
+      const userPoints = await api.getHousePointUser(user.id, organizationId)
       if (userPoints) {
         setUserPoints(userPoints.total_points)
       }
@@ -166,7 +183,8 @@ export default function HousePointsPage() {
 
   const fetchRequirement = async (user: any) => {
     try {
-      const org = await api.getOrganizationById(user.organization_id)
+      const organizationId = user.user_metadata?.organization_id || user.organizationId || user.organization_id
+      const org = await api.getOrganizationById(organizationId)
       if (org?.hour_requirements) {
         const housePointsRequirement = org.hour_requirements.find(req => req.type === 'housePoints')
         if (housePointsRequirement) {
@@ -202,12 +220,13 @@ export default function HousePointsPage() {
     try {
       if (!userProfile) return
 
+      const organizationId = userProfile.user_metadata?.organization_id || userProfile.organizationId || userProfile.organization_id
+      
       const activityData = {
         ...newActivity,
         points: parseInt(newActivity.points),
-        organization_id: userProfile.organization_id,
-        created_by: userProfile.id,
-        status: 'active' as const
+        organization_id: organizationId,
+        created_by: userProfile.id
       }
 
       await api.createHousePointActivity(activityData)
@@ -231,6 +250,7 @@ export default function HousePointsPage() {
       
       // Refresh data
       await fetchActivities(userProfile)
+      await fetchUserPoints(userProfile)
     } catch (error) {
       console.error('Error creating activity:', error)
       toast({
@@ -269,9 +289,8 @@ export default function HousePointsPage() {
       const submission = {
         activity_id: activity.id,
         user_id: userProfile.id,
-        user_name: userProfile.name,
-        submission_data: submissionData,
         submission_type: submissionType,
+        file_url: submissionType === 'file' ? submissionData : undefined,
         status: 'pending' as const,
         points_awarded: 0
       }
@@ -418,19 +437,19 @@ export default function HousePointsPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            <div className="flex items-center gap-2 text-sm text-gray-500">
+            <div className={`flex items-center gap-2 text-sm ${getSecondaryTextColor()}`}>
               <Award className="h-4 w-4" />
               <span>{activity.points} points</span>
             </div>
-            <div className="flex items-center gap-2 text-sm text-gray-500">
+            <div className={`flex items-center gap-2 text-sm ${getSecondaryTextColor()}`}>
               <Calendar className="h-4 w-4" />
               <span>{formatDate(activity.start_date)} - {formatDate(activity.end_date)}</span>
             </div>
-            <div className="flex items-center gap-2 text-sm text-gray-500">
+            <div className={`flex items-center gap-2 text-sm ${getSecondaryTextColor()}`}>
               <Clock className="h-4 w-4" />
               <span>{formatTime(activity.start_time)} - {formatTime(activity.end_time)}</span>
             </div>
-            <div className="flex items-center gap-2 text-sm text-gray-500">
+            <div className={`flex items-center gap-2 text-sm ${getSecondaryTextColor()}`}>
               {activity.submission_type === 'qr' ? (
                 <QrCode className="h-4 w-4" />
               ) : (
@@ -493,14 +512,14 @@ export default function HousePointsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-800 flex items-center justify-center p-4">
-        <div className="text-white">Loading house points...</div>
+      <div className={`min-h-screen ${theme === 'dark' ? 'bg-slate-800' : theme === 'light' ? 'bg-gradient-to-br from-blue-50 via-white to-blue-50' : 'bg-white'} flex items-center justify-center p-4`}>
+        <div className={getTextColor()}>Loading house points...</div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-slate-800 p-6">
+    <div className={`min-h-screen p-6 ${theme === 'dark' ? 'bg-slate-800' : theme === 'light' ? 'bg-gradient-to-br from-blue-50 via-white to-blue-50' : 'bg-white'}`}>
       <div className="max-w-7xl mx-auto">
         <div className="flex items-center justify-between mb-8">
           <div>
@@ -512,9 +531,9 @@ export default function HousePointsPage() {
               <CardContent className="p-4">
                 <div className="text-center">
                   <div className={`text-2xl font-bold ${getTextColor()}`}>{userPoints}</div>
-                  <div className="text-sm text-gray-500">Total Points</div>
+                  <div className={`text-sm ${getSecondaryTextColor()}`}>Total Points</div>
                   {requirement > 0 && (
-                    <div className="text-xs text-gray-400 mt-1">
+                    <div className={`text-xs ${getMutedTextColor()} mt-1`}>
                       Required: {requirement}
                     </div>
                   )}
@@ -548,7 +567,7 @@ export default function HousePointsPage() {
               <CardContent className="text-center py-12">
                 <Award className="h-12 w-12 mx-auto text-gray-400 mb-4" />
                 <h3 className={`text-lg font-semibold ${getTextColor()}`}>No activities yet</h3>
-                <p className="text-gray-500">Create an activity to get started</p>
+                <p className={getSecondaryTextColor()}>Create an activity to get started</p>
               </CardContent>
             </Card>
           ) : (
@@ -725,23 +744,28 @@ export default function HousePointsPage() {
               {pendingSubmissions.length === 0 ? (
                 <div className="text-center py-8">
                   <CheckCircle className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                  <p className="text-gray-500">No pending submissions</p>
+                  <p className={getSecondaryTextColor()}>No pending submissions</p>
                 </div>
               ) : (
                 pendingSubmissions.map((submission) => (
                   <Card key={submission.id} className={getCardClasses()}>
                     <CardContent className="p-4">
                       <div className="flex items-center justify-between">
-                        <div>
-                          <h4 className={`font-semibold ${getTextColor()}`}>{submission.user_name}</h4>
-                          <p className="text-sm text-gray-500">{submission.submission_data}</p>
-                        </div>
+                                                 <div>
+                           <h4 className={`font-semibold ${getTextColor()}`}>User {submission.user_id.slice(0, 8)}...</h4>
+                           <p className={`text-sm ${getSecondaryTextColor()}`}>
+                             {submission.submission_type === 'file' ? submission.file_url : 'QR Code Submission'}
+                           </p>
+                         </div>
                         <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            onClick={() => approveSubmission(submission.id, selectedActivity?.points || 0)}
-                            className="bg-green-600 hover:bg-green-700"
-                          >
+                                                     <Button
+                             size="sm"
+                             onClick={() => {
+                               const activity = activities.find(a => a.id === submission.activity_id)
+                               approveSubmission(submission.id, activity?.points || 0)
+                             }}
+                             className="bg-green-600 hover:bg-green-700"
+                           >
                             <CheckCircle className="h-4 w-4 mr-1" />
                             Approve
                           </Button>

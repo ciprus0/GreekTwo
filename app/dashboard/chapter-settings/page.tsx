@@ -361,7 +361,10 @@ export default function ChapterSettingsPage() {
                     {feature === 'pledgeSystem' && <Award className="h-5 w-5" />}
                     {feature === 'announcements' && <Megaphone className="h-5 w-5" />}
                     <Label className={getTextColor()}>
-                      {feature.charAt(0).toUpperCase() + feature.slice(1).replace(/([A-Z])/g, ' $1')}
+                      {feature === 'hours' && orgSettings.trackingSystem === 'housePoints' 
+                        ? 'House Points' 
+                        : feature.charAt(0).toUpperCase() + feature.slice(1).replace(/([A-Z])/g, ' $1')
+                      }
                     </Label>
                   </div>
                   <Switch

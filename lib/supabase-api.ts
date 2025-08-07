@@ -333,29 +333,31 @@ export interface HousePointActivity {
   title: string
   description: string
   points: number
-  organization_id: string
-  created_by: string
   start_date: string
   end_date: string
   start_time: string
   end_time: string
   submission_type: 'qr' | 'file'
-  status: 'active' | 'expired' | 'completed'
+  qr_code?: string
+  organization_id: string
+  created_by: string
   created_at: string
+  updated_at: string
 }
 
 export interface HousePointSubmission {
   id: string
   activity_id: string
   user_id: string
-  user_name: string
-  submission_data: string // QR code data or file URL
   submission_type: 'qr' | 'file'
+  file_url?: string
   status: 'pending' | 'approved' | 'rejected'
   points_awarded: number
   reviewed_by?: string
   reviewed_at?: string
+  review_notes?: string
   created_at: string
+  updated_at: string
 }
 
 export interface HousePointUser {
@@ -363,7 +365,6 @@ export interface HousePointUser {
   user_id: string
   organization_id: string
   total_points: number
-  created_at: string
   updated_at: string
 }
 
@@ -3678,11 +3679,16 @@ export const api = {
     ) // Cache for 5 minutes
   },
 
-  async createHousePointActivity(activityData: Omit<HousePointActivity, "id" | "created_at">): Promise<HousePointActivity> {
-    const { data, error } = await supabase.from("house_point_activities").insert(activityData).select().single()
+  async createHousePointActivity(activityData: Omit<HousePointActivity, "id" | "created_at" | "updated_at">): Promise<HousePointActivity> {
+    console.log("🔄 Creating house point activity:", activityData)
+    
+    const { data, error } = await supabase.from("house_points_activities").insert(activityData).select().single()
     if (error) {
+      console.error("❌ Error creating house point activity:", error)
       throw new Error(`Failed to create house point activity: ${error.message}`)
     }
+
+    console.log("✅ House point activity created successfully:", data)
 
     // Invalidate house point activities cache
     invalidateOrganizationCache(activityData.organization_id)
@@ -3693,13 +3699,13 @@ export const api = {
   async getHousePointActivitiesByOrganization(organizationId: string): Promise<HousePointActivity[]> {
     if (!organizationId) return []
 
-    const cacheKey = getCacheKey("house_point_activities", organizationId)
+    const cacheKey = getCacheKey("house_points_activities", organizationId)
 
     return withCache(
       cacheKey,
       async () => {
         const { data, error } = await supabase
-          .from("house_point_activities")
+          .from("house_points_activities")
           .select("*")
           .eq("organization_id", organizationId)
           .order("start_date", { ascending: true })
@@ -3716,7 +3722,7 @@ export const api = {
 
   async updateHousePointActivity(id: string, updates: Partial<HousePointActivity>): Promise<HousePointActivity | null> {
     if (!id) return null
-    const { data, error } = await supabase.from("house_point_activities").update(updates).eq("id", id).select().single()
+    const { data, error } = await supabase.from("house_points_activities").update(updates).eq("id", id).select().single()
     if (error) {
       console.error("❌ Error updating house point activity:", error)
       throw new Error(`Failed to update house point activity: ${error.message}`)
@@ -3724,7 +3730,7 @@ export const api = {
 
     // Clear house point activities cache
     const activity = data as HousePointActivity
-    cacheManager.delete(getCacheKey("house_point_activities", activity.organization_id))
+    cacheManager.delete(getCacheKey("house_points_activities", activity.organization_id))
 
     return activity
   },
@@ -3733,9 +3739,9 @@ export const api = {
     if (!id) return false
 
     // Get house point activity info before deletion to clear cache
-    const { data: activity } = await supabase.from("house_point_activities").select("organization_id").eq("id", id).single()
+    const { data: activity } = await supabase.from("house_points_activities").select("organization_id").eq("id", id).single()
 
-    const { error } = await supabase.from("house_point_activities").delete().eq("id", id)
+    const { error } = await supabase.from("house_points_activities").delete().eq("id", id)
     if (error) {
       console.error("❌ Error deleting house point activity:", error)
       throw new Error(`Failed to delete house point activity: ${error.message}`)
@@ -3743,15 +3749,16 @@ export const api = {
 
     // Clear cache
     if (activity) {
-      cacheManager.delete(getCacheKey("house_point_activities", activity.organization_id))
+      cacheManager.delete(getCacheKey("house_points_activities", activity.organization_id))
     }
 
     return true
   },
 
-  async createHousePointSubmission(submissionData: Omit<HousePointSubmission, "id" | "created_at">): Promise<HousePointSubmission> {
-    const { data, error } = await supabase.from("house_point_submissions").insert(submissionData).select().single()
+  async createHousePointSubmission(submissionData: Omit<HousePointSubmission, "id" | "created_at" | "updated_at">): Promise<HousePointSubmission> {
+    const { data, error } = await supabase.from("house_points_submissions").insert(submissionData).select().single()
     if (error) {
+      console.error("❌ Error creating house point submission:", error)
       throw new Error(`Failed to create house point submission: ${error.message}`)
     }
 
@@ -3764,13 +3771,13 @@ export const api = {
   async getHousePointSubmissionsByActivity(activityId: string): Promise<HousePointSubmission[]> {
     if (!activityId) return []
 
-    const cacheKey = getCacheKey("house_point_submissions", activityId)
+    const cacheKey = getCacheKey("house_points_submissions", activityId)
 
     return withCache(
       cacheKey,
       async () => {
         const { data, error } = await supabase
-          .from("house_point_submissions")
+          .from("house_points_submissions")
           .select("*")
           .eq("activity_id", activityId)
           .order("created_at", { ascending: true })
@@ -3787,7 +3794,7 @@ export const api = {
 
   async updateHousePointSubmission(id: string, updates: Partial<HousePointSubmission>): Promise<HousePointSubmission | null> {
     if (!id) return null
-    const { data, error } = await supabase.from("house_point_submissions").update(updates).eq("id", id).select().single()
+    const { data, error } = await supabase.from("house_points_submissions").update(updates).eq("id", id).select().single()
     if (error) {
       console.error("❌ Error updating house point submission:", error)
       throw new Error(`Failed to update house point submission: ${error.message}`)
@@ -3795,7 +3802,7 @@ export const api = {
 
     // Clear house point submissions cache
     const submission = data as HousePointSubmission
-    cacheManager.delete(getCacheKey("house_point_submissions", submission.activity_id))
+    cacheManager.delete(getCacheKey("house_points_submissions", submission.activity_id))
 
     return submission
   },
@@ -3804,9 +3811,9 @@ export const api = {
     if (!id) return false
 
     // Get house point submission info before deletion to clear cache
-    const { data: submission } = await supabase.from("house_point_submissions").select("activity_id").eq("id", id).single()
+    const { data: submission } = await supabase.from("house_points_submissions").select("activity_id").eq("id", id).single()
 
-    const { error } = await supabase.from("house_point_submissions").delete().eq("id", id)
+    const { error } = await supabase.from("house_points_submissions").delete().eq("id", id)
     if (error) {
       console.error("❌ Error deleting house point submission:", error)
       throw new Error(`Failed to delete house point submission: ${error.message}`)
@@ -3814,7 +3821,7 @@ export const api = {
 
     // Clear cache
     if (submission) {
-      cacheManager.delete(getCacheKey("house_point_submissions", submission.activity_id))
+      cacheManager.delete(getCacheKey("house_points_submissions", submission.activity_id))
     }
 
     return true
@@ -3823,19 +3830,27 @@ export const api = {
   async getHousePointUser(userId: string, organizationId: string): Promise<HousePointUser | null> {
     if (!userId || !organizationId) return null
 
-    const cacheKey = getCacheKey("house_point_user", userId, organizationId)
+    const cacheKey = getCacheKey("house_points_totals", userId, organizationId)
 
     return withCache(
       cacheKey,
       async () => {
         const { data, error } = await supabase
-          .from("house_point_users")
+          .from("house_points_totals")
           .select("*")
           .eq("user_id", userId)
           .eq("organization_id", organizationId)
           .single()
 
         if (error) {
+          if (error.code === "PGRST116") {
+            // User doesn't exist, create one
+            return await this.createHousePointUser({
+              user_id: userId,
+              organization_id: organizationId,
+              total_points: 0
+            })
+          }
           throw new Error(`Failed to fetch house point user: ${error.message}`)
         }
 
@@ -3845,16 +3860,28 @@ export const api = {
     ) // Cache for 5 minutes
   },
 
+  async createHousePointUser(userData: Omit<HousePointUser, "id" | "updated_at">): Promise<HousePointUser> {
+    const { data, error } = await supabase.from("house_points_totals").insert(userData).select().single()
+    if (error) {
+      throw new Error(`Failed to create house point user: ${error.message}`)
+    }
+
+    // Invalidate house point users cache
+    invalidateOrganizationCache(userData.organization_id)
+
+    return data as HousePointUser
+  },
+
   async updateHousePointUser(id: string, updates: Partial<HousePointUser>): Promise<HousePointUser | null> {
     if (!id) return null
-    const { data, error } = await supabase.from("house_point_users").update(updates).eq("id", id).select().single()
+    const { data, error } = await supabase.from("house_points_totals").update(updates).eq("id", id).select().single()
     if (error) {
       console.error("❌ Error updating house point user:", error)
       throw new Error(`Failed to update house point user: ${error.message}`)
     }
 
     // Clear house point users cache
-    cacheManager.delete(getCacheKey("house_point_users", id))
+    cacheManager.delete(getCacheKey("house_points_totals", id))
 
     return data as HousePointUser | null
   },
@@ -3863,9 +3890,9 @@ export const api = {
     if (!id) return false
 
     // Get house point user info before deletion to clear cache
-    const { data: user } = await supabase.from("house_point_users").select("organization_id").eq("id", id).single()
+    const { data: user } = await supabase.from("house_points_totals").select("organization_id").eq("id", id).single()
 
-    const { error } = await supabase.from("house_point_users").delete().eq("id", id)
+    const { error } = await supabase.from("house_points_totals").delete().eq("id", id)
     if (error) {
       console.error("❌ Error deleting house point user:", error)
       throw new Error(`Failed to delete house point user: ${error.message}`)
@@ -3873,7 +3900,7 @@ export const api = {
 
     // Clear cache
     if (user) {
-      cacheManager.delete(getCacheKey("house_point_users", user.organization_id))
+      cacheManager.delete(getCacheKey("house_points_totals", user.organization_id))
     }
 
     return true
