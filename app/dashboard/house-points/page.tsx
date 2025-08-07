@@ -45,7 +45,7 @@ export default function HousePointsPage() {
 
   const { toast } = useToast()
   const { theme } = useTheme()
-  const { getTextColor, getCardClasses, getButtonClasses, getInputClasses, getDialogClasses } = useTextColors()
+  const { getTextColor, getSecondaryTextColor, getMutedTextColor, getCardClasses, getButtonClasses, getInputClasses, getDialogClasses } = useTextColors()
   const router = useRouter()
 
   useEffect(() => {
