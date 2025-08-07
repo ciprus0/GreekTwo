@@ -213,7 +213,7 @@ export default function ResetPasswordPage() {
           
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <Label htmlFor="password" className={getTextColor()}>
+              <Label htmlFor="password" className={`${getTextColor()} text-white`}>
                 New Password
               </Label>
               <div className="relative">
@@ -246,7 +246,7 @@ export default function ResetPasswordPage() {
             </div>
             
             <div>
-              <Label htmlFor="confirmPassword" className={getTextColor()}>
+              <Label htmlFor="confirmPassword" className={`${getTextColor()} text-white`}>
                 Confirm New Password
               </Label>
               <div className="relative">
@@ -288,7 +288,7 @@ export default function ResetPasswordPage() {
                 <Button
                   type="button"
                   variant="outline"
-                  className="backdrop-blur-sm border border-white/20 text-white hover:bg-white/10"
+                  className="backdrop-blur-sm border border-white/20 text-white hover:bg-white/10 !text-white"
                 >
                   <ArrowLeft className="h-4 w-4 mr-2" />
                   Back to Login

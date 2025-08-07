@@ -158,7 +158,7 @@ export default function ForgotPasswordPage() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <Label htmlFor="email" className={getTextColor()}>
+              <Label htmlFor="email" className={`${getTextColor()} text-white`}>
                 Email Address
               </Label>
               <Input
@@ -185,7 +185,7 @@ export default function ForgotPasswordPage() {
                 <Button
                   type="button"
                   variant="outline"
-                  className="backdrop-blur-sm border border-white/20 text-white hover:bg-white/10"
+                  className="backdrop-blur-sm border border-white/20 text-white hover:bg-white/10 !text-white"
                 >
                   <ArrowLeft className="h-4 w-4 mr-2" />
                   Back to Login
