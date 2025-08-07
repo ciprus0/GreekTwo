@@ -172,17 +172,28 @@ export default function HousePointsPage() {
   const fetchUserSubmissions = async (user: any) => {
     try {
       const submissions: Record<string, HousePointSubmission> = {}
-      for (const activity of activities) {
+      
+      // Get all activities first
+      const organizationId = user.user_metadata?.organization_id || user.organizationId || user.organization_id
+      const allActivities = await api.getHousePointActivitiesByOrganization(organizationId)
+      
+      // For each activity, get the user's submission
+      for (const activity of allActivities) {
         try {
           const activitySubmissions = await api.getHousePointSubmissionsByActivity(activity.id)
+          console.log(`Activity ${activity.id} (${activity.title}) has ${activitySubmissions.length} submissions`)
           const userSubmission = activitySubmissions.find(sub => sub.user_id === user.id)
           if (userSubmission) {
             submissions[activity.id] = userSubmission
+            console.log(`Found user submission for activity ${activity.id}:`, userSubmission.status)
+          } else {
+            console.log(`No user submission found for activity ${activity.id}`)
           }
         } catch (error) {
           console.error('Error fetching activity submissions:', error)
         }
       }
+      console.log('Final user submissions:', submissions)
       setUserSubmissions(submissions)
     } catch (error) {
       console.error('Error fetching user submissions:', error)
@@ -209,7 +220,13 @@ export default function HousePointsPage() {
       if (!isAdmin) return
       
       const allSubmissions: HousePointSubmission[] = []
-      for (const activity of activities) {
+      
+      // Get all activities first
+      const organizationId = user.user_metadata?.organization_id || user.organizationId || user.organization_id
+      const allActivities = await api.getHousePointActivitiesByOrganization(organizationId)
+      
+      // For each activity, get pending submissions
+      for (const activity of allActivities) {
         try {
           const activitySubmissions = await api.getHousePointSubmissionsByActivity(activity.id)
           const pendingSubs = activitySubmissions.filter(sub => sub.status === 'pending')
@@ -264,9 +281,12 @@ export default function HousePointsPage() {
         submission_type: 'qr'
       })
       
-      // Refresh data
-      await fetchActivities(userProfile)
-      await fetchUserPoints(userProfile)
+             // Refresh data
+       await Promise.all([
+         fetchActivities(userProfile),
+         fetchUserPoints(userProfile),
+         fetchUserSubmissions(userProfile)
+       ])
     } catch (error) {
       console.error('Error creating activity:', error)
       toast({
@@ -569,7 +589,11 @@ export default function HousePointsPage() {
 
   const getSubmissionStatus = (activityId: string) => {
     const submission = userSubmissions[activityId]
-    if (!submission) return 'not_submitted'
+    if (!submission) {
+      console.log(`No submission found for activity ${activityId}`)
+      return 'not_submitted'
+    }
+    console.log(`Submission status for activity ${activityId}:`, submission.status)
     return submission.status
   }
 
@@ -604,14 +628,16 @@ export default function HousePointsPage() {
 
     return (
       <Card className={getCardClasses()}>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className={getTextColor()}>{activity.title}</CardTitle>
-            <div className="flex items-center gap-2">
-              <Badge className={getStatusColor(status)}>
-                {getStatusText(status)}
-              </Badge>
-                             {isAdmin && !isPast && (
+                 <CardHeader>
+           <div className="flex items-start justify-between gap-4">
+             <div className="flex-1 min-w-0">
+               <CardTitle className={getTextColor()}>{activity.title}</CardTitle>
+             </div>
+             <div className="flex items-center gap-3 flex-shrink-0">
+               <Badge className={getStatusColor(status)}>
+                 {getStatusText(status)}
+               </Badge>
+               {isAdmin && !isPast && (
                  <Button
                    variant="outline"
                    size="sm"
@@ -622,8 +648,8 @@ export default function HousePointsPage() {
                    <Trash2 className="h-4 w-4" />
                  </Button>
                )}
-            </div>
-          </div>
+             </div>
+           </div>
           <CardDescription className={getTextColor()}>
             {activity.description}
           </CardDescription>
