@@ -361,7 +361,7 @@ export default function TasksPage() {
 
   return (
     <ThemeWrapper>
-      <div className="space-y-6 p-4 md:p-6">
+      <div className="space-y-6 p-4 md:p-6 overflow-hidden">
         <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
           <div>
             <h1 className={`text-2xl font-bold tracking-tight ${getTextColor()}`}>Tasks</h1>

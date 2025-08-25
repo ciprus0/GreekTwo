@@ -560,14 +560,14 @@ export default function ChapterCustomizationPage() {
 
   if (!user || !organization) {
     return (
-      <div className="min-h-screen bg-slate-800 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-slate-800 flex items-center justify-center p-4 overflow-hidden">
         <div className="text-white">Loading...</div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-slate-800 p-6">
+    <div className="min-h-screen bg-slate-800 p-6 overflow-hidden">
       <div className="max-w-4xl mx-auto">
         <div className="mb-8">
           <h1 className={`text-3xl font-bold ${getTextColor()}`}>Chapter Customization</h1>

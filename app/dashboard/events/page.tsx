@@ -1072,8 +1072,8 @@ export default function EventsPage() {
   }
 
   return (
-    <div className="min-h-screen p-6">
-      <div className="space-y-6 w-full max-w-full overflow-x-hidden">
+    <div className="min-h-screen p-6 overflow-hidden">
+      <div className="space-y-6 w-full max-w-full overflow-hidden">
         <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
           <div>
             <h1 className={`text-2xl font-bold tracking-tight ${getTextColor()}`}>Events</h1>

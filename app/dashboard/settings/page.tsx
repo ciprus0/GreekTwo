@@ -551,7 +551,7 @@ export default function SettingsPage() {
 
   return (
     <ThemeWrapper>
-      <div className="space-y-6 p-4 md:p-6">
+      <div className="space-y-6 p-4 md:p-6 overflow-hidden">
         <div>
           <h1 className={`text-2xl font-bold tracking-tight ${getTextColor()}`}>Settings</h1>
           <p className={getSecondaryTextColor()}>Manage your account settings and preferences.</p>

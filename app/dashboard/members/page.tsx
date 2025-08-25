@@ -574,7 +574,7 @@ export default function MembersPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 overflow-hidden">
       <div className="flex items-center justify-between">
         <div>
           <h1 className={`text-3xl font-bold ${getTextColor()}`}>Members</h1>

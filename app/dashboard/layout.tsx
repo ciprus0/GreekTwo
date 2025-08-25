@@ -479,7 +479,7 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className={`${getBackgroundClasses()} flex flex-col md:flex-row w-full max-w-full overflow-x-hidden`}>
+    <div className={`${getBackgroundClasses()} flex flex-col md:flex-row w-full max-w-full overflow-hidden`}>
       {/* Sidebar for desktop */}
       <aside
         className={`hidden md:flex ${sidebarCollapsed ? "w-16" : "w-64"} flex-col ${
@@ -1001,7 +1001,7 @@ export default function DashboardLayout({
 
       {/* Main content */}
       <main
-        className={`flex-1 ${sidebarCollapsed ? "md:ml-16" : "md:ml-64"} transition-all duration-300 p-6 md:p-8 w-full max-w-full overflow-x-hidden pt-20 md:pt-6`}
+        className={`flex-1 ${sidebarCollapsed ? "md:ml-16" : "md:ml-64"} transition-all duration-300 p-6 md:p-8 w-full max-w-full overflow-hidden pt-20 md:pt-6`}
       >
         {children}
       </main>

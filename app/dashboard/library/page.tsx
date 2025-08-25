@@ -164,7 +164,7 @@ export default function LibraryPage() {
 
   return (
     <ThemeWrapper>
-      <div className="space-y-6 p-4 md:p-6">
+      <div className="space-y-6 p-4 md:p-6 overflow-hidden">
         <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-8">
           <h1 className={`text-3xl font-bold tracking-tight ${getTextColor()}`}>Library</h1>
           <Button className={getButtonClasses()} onClick={() => setIsUploadDialogOpen(true)}>

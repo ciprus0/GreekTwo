@@ -222,7 +222,7 @@ export default function MigrationPage() {
   }
 
   return (
-    <div className="container py-10">
+    <div className="container py-10 overflow-hidden">
       <Card className="max-w-4xl mx-auto">
         <CardHeader>
           <CardTitle>Data Migration</CardTitle>

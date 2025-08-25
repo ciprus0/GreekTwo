@@ -147,7 +147,7 @@ export default function SimpleMigrationPage() {
   }
 
   return (
-    <div className="container mx-auto p-6 max-w-4xl">
+    <div className="container mx-auto p-6 max-w-4xl overflow-hidden">
       <Card>
         <CardHeader>
           <CardTitle>Simple Data Migration</CardTitle>

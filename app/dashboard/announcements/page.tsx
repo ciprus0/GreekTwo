@@ -468,7 +468,7 @@ export default function AnnouncementsPage() {
 
   return (
     <ThemeWrapper>
-      <div className="container mx-auto p-4 space-y-6">
+      <div className="container mx-auto p-4 space-y-6 overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>

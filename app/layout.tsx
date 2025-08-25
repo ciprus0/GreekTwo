@@ -12,8 +12,8 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
-      <body className={inter.className}>
+    <html lang="en" className="overflow-hidden">
+      <body className={`${inter.className} overflow-hidden`}>
         <ThemeProvider>
           {children}
           <Toaster />

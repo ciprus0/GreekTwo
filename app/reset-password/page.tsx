@@ -147,7 +147,7 @@ export default function ResetPasswordPage() {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-slate-800 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-slate-800 flex items-center justify-center p-4 overflow-hidden">
         <Card className="w-full max-w-md glass-card border-white/20">
           <CardHeader className="text-center">
             <div className="mx-auto mb-4 w-16 h-16 bg-green-100/20 backdrop-blur-sm rounded-full flex items-center justify-center border border-green-200/30">
@@ -182,7 +182,7 @@ export default function ResetPasswordPage() {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-slate-800 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-slate-800 flex items-center justify-center p-4 overflow-hidden">
         <Card className="w-full max-w-md glass-card border-white/20">
           <CardContent className="text-center py-12">
             <div className="text-white">Verifying your account...</div>
@@ -193,7 +193,7 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-800 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-slate-800 flex items-center justify-center p-4 overflow-hidden">
       <Card className="w-full max-w-md glass-card border-white/20">
         <CardHeader className="text-center">
           <div className="mx-auto mb-4 w-16 h-16 bg-blue-100/20 backdrop-blur-sm rounded-full flex items-center justify-center border border-blue-200/30">

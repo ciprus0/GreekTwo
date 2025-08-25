@@ -7,7 +7,7 @@ import { Github, Linkedin, Twitter } from "lucide-react"
 
 export default function TeamPage() {
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col overflow-hidden">
       <header className="container mx-auto py-4 px-4 md:px-6 flex items-center justify-between">
         <Link href="/" className="flex items-center">
           <Image src="/logo.svg" alt="Greeky Logo" width={60} height={60} className="h-12 w-auto" />
